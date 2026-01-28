@@ -8,7 +8,6 @@
 	import X from 'lucide-svelte/icons/x';
 	import ExternalLink from 'lucide-svelte/icons/external-link';
 	import Instagram from 'lucide-svelte/icons/instagram';
-	import Twitter from 'lucide-svelte/icons/twitter';
 	import Mail from 'lucide-svelte/icons/mail';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 
@@ -109,6 +108,7 @@
 							href="https://www.instagram.com/momoyama_tech/"
 							target="_blank"
 							rel="noopener noreferrer"
+							title="Instagram"
 							class="text-[#1D1D1F] transition-all duration-300 hover:opacity-70 dark:text-white"
 						>
 							<Instagram class="w-[18px] h-[18px]" stroke-width="1.5" />
@@ -117,9 +117,14 @@
 							href="https://x.com/momoyama_tech"
 							target="_blank"
 							rel="noopener noreferrer"
+							title="X (Twitter)"
 							class="text-[#1D1D1F] transition-all duration-300 hover:opacity-70 dark:text-white"
 						>
-							<Twitter class="w-[18px] h-[18px]" stroke-width="1.5" />
+							<svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor">
+								<path
+									d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"
+								/>
+							</svg>
 						</a>
 					</div>
 					<div class="scale-100 origin-right">
@@ -173,6 +178,7 @@
 									href="https://www.instagram.com/momoyama_tech/"
 									target="_blank"
 									rel="noopener noreferrer"
+									title="Instagram"
 									class="text-gray-900 transition-opacity hover:opacity-70 dark:text-white"
 								>
 									<Instagram class="h-6 w-6" />
@@ -181,9 +187,14 @@
 									href="https://x.com/momoyama_tech"
 									target="_blank"
 									rel="noopener noreferrer"
+									title="X (Twitter)"
 									class="text-gray-900 transition-opacity hover:opacity-70 dark:text-white"
 								>
-									<Twitter class="h-6 w-6" />
+									<svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+										<path
+											d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"
+										/>
+									</svg>
 								</a>
 							</div>
 						</div>
@@ -245,7 +256,7 @@
 					<h4 class="mb-3 font-medium text-gray-400">{t.footer.links}</h4>
 					<div class="space-y-2">
 						<a
-							href="https://andrew.ac.jp/"
+							href="https://www.andrew.ac.jp/index.html"
 							target="_blank"
 							rel="noopener noreferrer"
 							class="flex items-center gap-1 text-gray-500 transition-colors hover:text-black dark:hover:text-white"
@@ -280,18 +291,18 @@
 					</p>
 				</div>
 
-				<div class="flex flex-wrap items-center gap-4">
+				<div class="flex flex-wrap items-center gap-3">
 					<a
 						href="https://www.instagram.com/momoyama_tech/"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="group flex items-center gap-3 rounded-xl bg-white px-5 py-3 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md dark:bg-black"
+						class="group flex h-11 items-center justify-center gap-3 rounded-xl bg-white px-5 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md dark:bg-black"
 					>
 						<Instagram
 							class="h-5 w-5 text-gray-900 transition-colors group-hover:text-[#E1306C] dark:text-white"
 						/>
 						<span
-							class="font-bold text-gray-900 dark:text-white sm:inline-block"
+							class="text-sm font-bold text-gray-900 dark:text-white"
 							style="font-family: 'Inter', sans-serif;">Instagram</span
 						>
 					</a>
@@ -300,32 +311,40 @@
 						href="https://x.com/momoyama_tech"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="group flex items-center gap-3 rounded-xl bg-white px-5 py-3 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md dark:bg-black"
+						class="group flex h-11 items-center justify-center gap-3 rounded-xl bg-white px-5 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md dark:bg-black"
 					>
-						<Twitter
-							class="h-5 w-5 text-gray-900 transition-colors group-hover:text-[#1DA1F2] dark:text-white"
-						/>
+						<svg
+							class="h-5 w-5 text-gray-900 transition-colors group-hover:text-black dark:text-white dark:group-hover:text-white"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+						>
+							<path
+								d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"
+							/>
+						</svg>
 						<span
-							class="font-bold text-gray-900 dark:text-white sm:inline-block"
-							style="font-family: 'Inter', sans-serif;">X (Twitter)</span
+							class="text-sm font-bold text-gray-900 dark:text-white"
+							style="font-family: 'Inter', sans-serif;">X</span
 						>
 					</a>
 
-					<div class="flex flex-col items-center gap-3">
+					<div class="flex flex-col items-center gap-2">
 						<button
 							onclick={copyEmailAddress}
 							title="Click to Copy: tech@andrew.ac.jp"
-							class="group flex items-center gap-3 rounded-xl bg-black px-6 py-3 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md cursor-pointer dark:bg-white"
+							class="group flex h-11 items-center justify-center gap-3 rounded-xl bg-black px-6 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md cursor-pointer dark:bg-white"
 						>
 							<Mail
 								class="h-5 w-5 text-white transition-opacity group-hover:opacity-80 dark:text-black"
 							/>
 							<span
-								class="font-bold text-white dark:text-black sm:inline-block"
+								class="text-sm font-bold text-white dark:text-black"
 								style="font-family: 'Inter', sans-serif;">{t.footer.emailLabel}</span
 							>
 						</button>
-						<span class="text-xs text-gray-400 font-medium">tech@andrew.ac.jp</span>
+						<span class="text-[10px] text-gray-400 font-medium tracking-tight"
+							>tech@andrew.ac.jp</span
+						>
 					</div>
 				</div>
 			</div>
