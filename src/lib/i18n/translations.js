@@ -51,7 +51,7 @@ export const translations = {
         },
         news: {
             watermark: "NEWS ROOM",
-            title: "Latest News.",
+            title: "ニュース",
             desc: "テック部の最新情報と活動ログ。",
             readMore: "Read more",
             empty: "ニュースはまだありません",
@@ -59,7 +59,7 @@ export const translations = {
             openNotion: "Notionで開く"
         },
         focus: {
-            title: "Areas of Focus",
+            title: "活動内容",
             subtitle: "私たちが情熱を注ぐ3つの専門領域"
         }
     },
@@ -123,7 +123,7 @@ export const translations = {
             openNotion: "Open in Notion"
         },
         focus: {
-            title: "Areas of Focus",
+            title: "Areas of Focus.",
             subtitle: "Three specialized areas we are passionate about"
         }
     }

@@ -19,21 +19,21 @@
 	/** @type {{ title: string, description: string, iconType: 'cog' | 'palette' | 'sparkles' }[]} */
 	const rawActivities = [
 		{
-			title: 'Project\nEngineering',
+			title: '開発とAI活用',
 			description:
-				'チームでのモダンな開発フローの確立。GitHubを用いた共同開発やNotionでのナレッジ共有など、プロフェッショナルなエンジニアリング文化を醸成し、実戦的なプロダクトを制作しています。',
+				'チームで高め合う、一歩先の開発スタイル。GitHubやNotionなどのプロツールに加え、最新のAIツールも積極的に活用しています。AIのサポートを受けながら開発を進めることで、初心者でもスムーズにモノづくりをスタートでき、一人では届かない本格的なプロジェクトにも挑戦できる場所です。',
 			iconType: 'cog'
 		},
 		{
-			title: 'Experience\n& Design',
+			title: 'デザインと体験',
 			description:
-				'Appleのヒューマンインターフェースガイドラインを参考に、一貫性のあるUI設計と、滑らかなアニメーションによるUXデザインを部全体のスタンダードとして追求しています。',
+				'直感的な操作感と、心地よいユーザー体験の追求。最新のUIデザイン原則に基づいた一貫性のある設計と、細部までこだわった滑らかなアニメーションを大切にしています。単に動くだけでなく、触れるだけでワクワクするような質の高いUXデザインを、部全体のスタンダードとして追求しています。',
 			iconType: 'palette'
 		},
 		{
-			title: 'Creative Tech\n& Mapping',
+			title: 'クリエイティブ・テック',
 			description:
-				'桃山祭でのプロジェクションマッピングをはじめとした、最新技術による空間演出。Unityや映像解析技術を駆使し、デジタルとリアルが融合する視覚体験を創造しています。',
+				'光と技術で、空間をキャンバスに変える。プロジェクションマッピングによる大規模な演出から、Unityを用いたインタラクティブなアートまで、最新技術を駆使した空間デザインに挑戦しています。映像解析やセンサー技術を組み合わせ、デジタルとリアルが交差する、圧倒的な没入体験を創造します。',
 			iconType: 'sparkles'
 		}
 	];
@@ -43,14 +43,36 @@
 	$effect(() => {
 		async function updateTranslations() {
 			if (language.current === 'EN') {
-				const promises = rawActivities.map(async (item) => {
-					// Translate title and description
-					// Note: Titles have newlines 'Project\nEngineering', translation might strip them or mess up.
-					// We might keep titles as is since they look English-ish or simple enough?
-					// Actually "Project Engineering" is English. "Creative Tech & Mapping" is English.
-					// "Experience & Design" is English.
-					// So titles might perfectly remain as is.
-					// Let's only translate description.
+				const promises = rawActivities.map(async (item, index) => {
+					// Specific manual translation for the Engineering section (Index 0)
+					if (index === 0) {
+						return {
+							...item,
+							title: 'Engineering\n& AI Innovation',
+							description:
+								'Team-driven development with a modern edge. Along with tools like GitHub and Notion, we actively leverage AI to streamline our workflow. By integrating AI support, even beginners can jump right into building real-world products and take on professional-level challenges together.'
+						};
+					}
+					// Specific manual translation for the Design section (Index 1)
+					if (index === 1) {
+						return {
+							...item,
+							title: 'Design\n& Experience',
+							description:
+								'Pursuing intuitive UI and seamless UX. We focus on consistent design based on modern interface principles and smooth animations that bring products to life. Our goal is to set a club-wide standard for high-quality experiences that are as delightful to use as they are functional.'
+						};
+					}
+					// Specific manual translation for the Creative Tech section (Index 2)
+					if (index === 2) {
+						return {
+							...item,
+							title: 'Creative Tech\n& Spatial Design',
+							description:
+								'Redefining spaces through light and technology. From large-scale projection mapping to interactive art powered by Unity, we explore the frontiers of spatial design. By blending sensor tech and visual analysis, we create immersive experiences where the digital and physical worlds converge.'
+						};
+					}
+
+					// For others, use auto-translation for description
 					const tDesc = await translationStore.get(item.description);
 					return { ...item, description: tDesc };
 				});
@@ -78,7 +100,7 @@
 					style="color: #1D1D1F;"
 					in:fly={{ y: 30, duration: 600, easing: cubicOut }}
 				>
-					{t.focus.title}.
+					{t.focus.title}
 				</h2>
 				<p
 					class="text-lg"
@@ -89,7 +111,7 @@
 				</p>
 			</div>
 
-			<div class="grid gap-6 md:grid-cols-3">
+			<div class="grid gap-8 md:grid-cols-3">
 				{#each displayActivities as activity, i}
 					<div in:fly={{ y: 50, delay: 200 + i * 100, duration: 700, easing: cubicOut }}>
 						<ActivityTile

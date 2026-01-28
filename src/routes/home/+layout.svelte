@@ -192,7 +192,7 @@
 				);
 
 				// Schedule Data Translation (Next & Upcoming)
-				const translateEvent = async (event) => {
+				const translateEvent = async (/** @type {any} */ event) => {
 					if (!event) return null;
 					const [tName, tLocation, tRemarks] = await Promise.all([
 						translationStore.get(event.title || event.name),
