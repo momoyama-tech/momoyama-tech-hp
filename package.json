@@ -55,8 +55,10 @@
 	},
 	"dependencies": {
 		"@notionhq/client": "^2.3.0",
+		"google-translate-api-x": "^10.7.2",
 		"lucide-svelte": "^0.563.0",
 		"marked": "^17.0.1",
-		"notion-to-md": "^3.1.9"
+		"notion-to-md": "^3.1.9",
+		"resend": "^6.9.1"
 	}
 }

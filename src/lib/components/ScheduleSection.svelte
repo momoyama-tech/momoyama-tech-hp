@@ -26,12 +26,14 @@
 	 * @param {string} dateStr
 	 */
 	function formatDate(dateStr) {
-		if (!dateStr) return 'TBD';
+		if (!dateStr) return t.schedule.tbd;
 		const date = new Date(dateStr);
-		return date.toLocaleDateString('ja-JP', {
+		const locale = language.current === 'JP' ? 'ja-JP' : 'en-US';
+		return date.toLocaleDateString(locale, {
+			year: 'numeric',
 			month: 'short',
 			day: 'numeric',
-			weekday: 'short'
+			weekday: language.current === 'JP' ? 'short' : undefined
 		});
 	}
 
@@ -59,6 +61,11 @@
 		if (type?.includes('MTG')) return 'bg-yellow-400';
 		return 'bg-gray-400';
 	}
+
+	import { language } from '$lib/stores/language.svelte.js';
+	import { translations } from '$lib/i18n/translations.js';
+
+	let t = $derived(translations[/** @type {'JP'|'EN'} */ (language.current)]);
 </script>
 
 <section id="schedule" class="py-32 relative overflow-hidden bg-white">
@@ -74,14 +81,22 @@
 				style="font-family: 'Inter', sans-serif; font-weight: 800; color: #1A1A1A;"
 				in:fly={{ y: 30, duration: 600, easing: cubicOut }}
 			>
-				Schedule
+				{#key language.current}
+					<span in:fade={{ duration: 300 }}>
+						{t.schedule.title}
+					</span>
+				{/key}
 			</h2>
 			<p
 				class="text-lg font-medium tracking-tight"
 				style="font-family: 'Inter', sans-serif; font-weight: 500; color: #86868B; letter-spacing: -0.02em;"
 				in:fly={{ y: 30, delay: 100, duration: 600, easing: cubicOut }}
 			>
-				今後の活動予定と記録
+				{#key language.current}
+					<span in:fade={{ duration: 300 }}>
+						{t.schedule.subTitle}
+					</span>
+				{/key}
 			</p>
 		</div>
 
@@ -95,49 +110,70 @@
 						class="text-sm font-black tracking-widest text-[#86868B] uppercase pl-4"
 						style="font-family: 'Inter', sans-serif; font-weight: 900; letter-spacing: 0.05em;"
 					>
-						NEXT EVENT
+						{#key language.current}
+							<span in:fade={{ duration: 300 }}>
+								{t.schedule.next}
+							</span>
+						{/key}
 					</h3>
 
 					<div
 						class="relative overflow-hidden rounded-[16px] border border-gray-100 bg-white p-8 md:p-12 shadow-[0_2px_40px_rgba(0,0,0,0.04)] transition-transform hover:translate-y-[-2px]"
 						in:fly={{ y: 30, duration: 600, easing: cubicOut }}
 					>
-						<div class="flex flex-col md:flex-row md:items-start md:gap-16">
+						<div class="flex flex-col md:flex-row md:items-center md:gap-8">
 							<!-- Date & Count -->
-							<div class="flex shrink-0 flex-col items-center md:items-start pl-2">
-								<span class="text-sm font-medium uppercase tracking-wider text-[#86868B]">
-									{new Date(event.date).getFullYear()}
-								</span>
-								<div class="flex items-baseline gap-2 my-2">
-									<span
-										class="text-7xl font-black text-[#1A1A1A] tracking-tighter"
-										style="font-family: 'Inter', sans-serif; letter-spacing: -0.05em; line-height: 1;"
-									>
-										{new Date(event.date).getDate()}
-									</span>
-									<span
-										class="text-2xl font-bold text-[#86868B] uppercase tracking-tighter"
-										style="font-family: 'Inter', sans-serif;"
-									>
-										{new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
-									</span>
+							<div class="flex shrink-0 flex-col items-center justify-center p-2 md:p-4">
+								<!-- Calendar Icon Container -->
+								<div
+									class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-sm border border-gray-100 aspect-square w-32 md:w-36 lg:w-40 p-4 mb-5 relative overflow-hidden"
+									style="box-shadow: 0 4px 20px rgba(0,0,0,0.03);"
+								>
+									<!-- Red Top Bar Accent -->
+									<div class="absolute top-0 left-0 right-0 h-1.5 bg-[#FF3B30]"></div>
+
+									<div class="flex flex-col items-center leading-none mt-2">
+										<!-- Month -->
+										<span
+											class="text-lg font-bold text-[#FF3B30] tracking-widest mb-0.5"
+											style="font-family: 'Inter', sans-serif;"
+										>
+											{#if language.current === 'JP'}
+												{new Date(event.date).getMonth() + 1}月
+											{:else}
+												{String(new Date(event.date).getMonth() + 1).padStart(2, '0')}
+											{/if}
+										</span>
+										<!-- Day -->
+										<span
+											class="text-6xl md:text-7xl font-black text-[#1A1A1A] tracking-tighter"
+											style="font-family: 'Inter', sans-serif; letter-spacing: -0.07em;"
+										>
+											{String(new Date(event.date).getDate()).padStart(2, '0')}
+										</span>
+									</div>
 								</div>
+
 								{#if daysUntil !== null && daysUntil >= 0}
 									<div
-										class="mt-4 px-4 py-1.5 text-xs font-black tracking-widest uppercase border border-[#1A1A1A] text-[#1A1A1A] rounded-full"
+										class="px-4 py-2 text-xs font-bold tracking-widest uppercase bg-[#F5F5F7] text-[#1A1A1A] rounded-lg"
 										style="font-family: 'Inter', sans-serif;"
 									>
-										{#if daysUntil === 0}
-											TODAY
-										{:else}
-											IN {daysUntil} DAYS
-										{/if}
+										{#key language.current}
+											<span in:fade={{ duration: 300 }}>
+												{#if daysUntil === 0}
+													{t.schedule.today}
+												{:else}
+													{t.schedule.inDays(daysUntil)}
+												{/if}
+											</span>
+										{/key}
 									</div>
 								{/if}
 							</div>
 
 							<!-- Content -->
-							<div class="mt-8 flex-1 text-center md:mt-2 md:text-left">
+							<div class="mt-8 flex-1 text-center md:mt-0 md:text-left">
 								<h4
 									class="mb-6 text-3xl md:text-5xl font-black text-[#1A1A1A] leading-tight tracking-tighter"
 									style="font-family: 'Inter', sans-serif; letter-spacing: -0.05em; line-height: 1.1;"
@@ -168,7 +204,7 @@
 				</div>
 			{:else}
 				<div class="text-center py-20 border-y border-gray-50">
-					<p class="text-[#86868B]">No upcoming events scheduled.</p>
+					<p class="text-[#86868B]">{t.schedule.empty}</p>
 				</div>
 			{/if}
 
@@ -179,7 +215,11 @@
 						class="text-sm font-black tracking-widest text-[#1A1A1A] uppercase pl-4 border-l-[3px] border-[#1A1A1A]"
 						style="font-family: 'Inter', sans-serif; font-weight: 900;"
 					>
-						UPCOMING
+						{#key language.current}
+							<span in:fade={{ duration: 300 }}>
+								{t.schedule.upcoming}
+							</span>
+						{/key}
 					</h3>
 
 					<div class="space-y-4 border-t border-gray-100 pt-8">
@@ -195,14 +235,11 @@
 										class="text-xl font-bold text-[#1A1A1A] tracking-tighter"
 										style="font-family: 'Inter', sans-serif; letter-spacing: -0.02em;"
 									>
+										>
 										{#if event.date}
-											{new Date(event.date).toLocaleDateString('en-US', {
-												year: 'numeric'
-											})}.{new Date(event.date).toLocaleDateString('en-US', {
-												month: '2-digit'
-											})}.{new Date(event.date).toLocaleDateString('en-US', { day: '2-digit' })}
+											{formatDate(event.date)}
 										{:else}
-											TBA
+											{t.schedule.tbd}
 										{/if}
 									</span>
 								</div>
@@ -240,7 +277,11 @@
 						class="inline-flex items-center gap-3 px-8 py-3 rounded-full border border-gray-200 text-[#1A1A1A] font-bold text-sm hover:bg-gray-50 transition-colors bg-white tracking-wide"
 						style="font-family: 'Inter', sans-serif;"
 					>
-						<span>{showHistory ? 'Hide Past Activities' : 'Show Past Activities'}</span>
+						{#key language.current}
+							<span in:fade={{ duration: 300 }}>
+								{showHistory ? t.schedule.hidePast : t.schedule.showPast}
+							</span>
+						{/key}
 						<ChevronDown
 							class="h-4 w-4 transition-transform duration-300 {showHistory ? 'rotate-180' : ''}"
 						/>

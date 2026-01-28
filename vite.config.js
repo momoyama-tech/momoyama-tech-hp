@@ -5,6 +5,10 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
+	server: {
+		host: true,
+		allowedHosts: ['viniferous-demeritoriously-leandra.ngrok-free.dev']
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit(),
