@@ -138,7 +138,8 @@
 			>
 				<svg
 					class="h-full w-full stroke-blue-900/60 dark:stroke-cyan-300/80"
-					style="stroke-width: 1.5px; fill: none;"
+					style="stroke-width: 1.5px; fill: none; transform: translateX({-rotateY *
+						4}px) translateY({-rotateX * 4}px); transition: transform 0.1s; will-change: transform;"
 				>
 					<path d="M40 0 V60 H100 V120" stroke-dasharray="2 2" />
 					<path d="M160 340 V200 H240 V100" stroke-dasharray="2 2" />
@@ -193,6 +194,8 @@
 				{#if isHovered}
 					<div
 						class="absolute inset-0 overflow-hidden opacity-30 dark:opacity-50 mix-blend-overlay"
+						style="transform: translateX({-rotateY * 10}px) translateY({-rotateX *
+							10}px); transition: transform 0.1s; will-change: transform;"
 					>
 						<svg
 							class="h-full w-full"
@@ -224,7 +227,9 @@
 					<!-- Golden Ratio & Grid -->
 					<svg
 						class="absolute inset-0 h-full w-full stroke-blue-500/40 dark:stroke-white/30"
-						style="fill: none; stroke-width: 0.5;"
+						style="fill: none; stroke-width: 0.5; transform: translateX({-rotateY *
+							6}px) translateY({-rotateX *
+							6}px); transition: transform 0.1s; will-change: transform;"
 					>
 						<!-- Grid -->
 						<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -248,6 +253,8 @@
 				<!-- Layer 1: Base Grid (Faint, Static) -->
 				<div
 					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1.5px,transparent_1.5px)] [background-size:20px_20px] opacity-[0.05]"
+					style="transform: translateX({-rotateY * 4}px) translateY({-rotateX *
+						4}px); transition: transform 0.1s; will-change: transform;"
 				></div>
 
 				{#if isHovered}

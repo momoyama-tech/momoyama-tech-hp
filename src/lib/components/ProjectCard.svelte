@@ -27,16 +27,52 @@
 	function handleImageError(e) {
 		e.currentTarget.style.display = 'none';
 	}
+
+	let parallaxX = $state(0);
+	let parallaxY = $state(0);
+	/** @type {HTMLElement} */
+	let cardElement;
+
+	/** @param {MouseEvent} e */
+	function handleMouseMove(e) {
+		if (!cardElement) return;
+		const rect = cardElement.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+		const centerX = rect.width / 2;
+		const centerY = rect.height / 2;
+		// Inverse movement for depth
+		parallaxX = (x - centerX) / 20;
+		parallaxY = (y - centerY) / 20;
+	}
+
+	function handleMouseLeave() {
+		parallaxX = 0;
+		parallaxY = 0;
+	}
 </script>
 
 <a
 	href={project.url}
 	target="_blank"
 	rel="noopener noreferrer"
-	class="project-card group block overflow-hidden rounded-3xl transition-all duration-500 hover:-translate-y-2 dark:bg-zinc-900/40 dark:border-white/10 dark:backdrop-blur-xl dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.3)]"
+	bind:this={cardElement}
+	onmousemove={handleMouseMove}
+	onmouseleave={handleMouseLeave}
+	class="project-card group block overflow-hidden rounded-3xl transition-all duration-500 hover:-translate-y-2 dark:bg-zinc-900/40 dark:border-white/10 dark:backdrop-blur-xl dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] relative"
 	class:border-glow={theme.isScanLineActive}
 	style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(50px); border: 1px solid rgba(243, 244, 246, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);"
 >
+	<!-- Decorative Parallax Grid (Dark Mode Only) -->
+	<div
+		class="absolute inset-0 pointer-events-none opacity-0 dark:group-hover:opacity-20 transition-opacity duration-500 z-0 overflow-hidden"
+	>
+		<div
+			class="absolute inset-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.2)_1px,transparent_1px)] [background-size:24px_24px]"
+			style="transform: translate({-parallaxX}px, {-parallaxY}px); transition: transform 0.1s; will-change: transform;"
+		></div>
+	</div>
+
 	<!-- Cover Image -->
 	<div class="relative aspect-[4/3] overflow-hidden" style="background-color: #F5F5F7;">
 		{#if project.coverUrl}

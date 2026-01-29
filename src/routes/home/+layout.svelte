@@ -568,10 +568,78 @@
 	<ScheduleSection scheduleData={displayScheduleData} pastEventsByMonth={data.pastEventsByMonth} />
 </div>
 
+<!-- Hidden Terminal Message (Interactive Playground) -->
+<div
+	class="relative flex h-32 w-full items-center justify-center overflow-hidden py-10"
+	role="presentation"
+>
+	<!-- Terminal Content: Visible only when spotlight (mask) is over it -->
+	<div
+		class="pointer-events-none sticky z-20 flex flex-col items-start justify-center gap-1 font-mono text-sm"
+		style="
+			mask-image: radial-gradient(circle 150px at {mouseX}px {mouseY}px, black, transparent 100%);
+			-webkit-mask-image: radial-gradient(circle 150px at {mouseX}px {mouseY}px, black, transparent 100%);
+			mask-attachment: fixed;
+			-webkit-mask-attachment: fixed;
+		"
+	>
+		<div
+			class="flex flex-col items-start gap-1 p-4 text-green-500 font-bold tracking-wider"
+			style="text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);"
+		>
+			<p class="overflow-hidden whitespace-nowrap animate-typing-1 border-r-2 border-green-500/0">
+				root@momoyama-tech:~$ access_granted...
+			</p>
+			<p class="overflow-hidden whitespace-nowrap animate-typing-2 opacity-0">
+				system_status: optimal
+			</p>
+			<p class="overflow-hidden whitespace-nowrap animate-typing-3 opacity-0">
+				hidden_message: "Innovation starts from the dark."
+			</p>
+		</div>
+	</div>
+</div>
+
 <!-- Modal Insertion -->
 {@render children()}
 
 <style>
+	@keyframes typing {
+		from {
+			width: 0;
+			border-color: transparent;
+		}
+		1% {
+			border-color: rgba(34, 197, 94, 0.8);
+		}
+		to {
+			width: 100%;
+			border-color: transparent;
+		}
+	}
+	@keyframes fade-in {
+		to {
+			opacity: 1;
+		}
+	}
+
+	.animate-typing-1 {
+		animation: typing 2s steps(40, end) forwards;
+		width: 0;
+	}
+	.animate-typing-2 {
+		animation:
+			typing 2s steps(40, end) forwards 2s,
+			fade-in 0.1s forwards 2s;
+		width: 0;
+	}
+	.animate-typing-3 {
+		animation:
+			typing 3s steps(40, end) forwards 4s,
+			fade-in 0.1s forwards 4s;
+		width: 0;
+	}
+
 	.news-card {
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 	}
