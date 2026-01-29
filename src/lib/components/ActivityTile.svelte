@@ -80,10 +80,6 @@
 		rotateX = ((mouseY - centerY) / centerY) * -3;
 		rotateY = ((mouseX - centerX) / centerX) * 3;
 
-		// Calculate rotation (limit to small angles for subtlety)
-		rotateX = ((mouseY - centerY) / centerY) * -3;
-		rotateY = ((mouseX - centerX) / centerX) * 3;
-
 		// Update inertia spotlight target
 		if (iconType === 'sparkles') {
 			spotlightPos.set({ x: mouseX, y: mouseY });
@@ -116,13 +112,22 @@
 		bind:this={tileElement}
 		class="group relative flex h-full flex-col justify-between overflow-hidden rounded-[2.5rem] border bg-white/20 p-10 text-left backdrop-blur-xl transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] dark:bg-zinc-900/40 dark:border-white/10"
 		class:border-glow={theme.isScanLineActive}
+		class:border-purple-400={iconType === 'cog' && isHovered}
+		class:border-purple-400-30={iconType === 'cog' && isHovered}
+		class:shadow-[0_0_20px_rgba(192,132,252,0.3)]={iconType === 'cog' && isHovered}
+		class:border-cyan-400={iconType === 'sparkles' && isHovered}
+		class:border-cyan-400-30={iconType === 'sparkles' && isHovered}
+		class:shadow-[0_0_20px_rgba(34,211,238,0.3)]={iconType === 'sparkles' && isHovered}
 		class:border-blue-400={iconType === 'palette' && isHovered}
 		class:border-blue-400-30={iconType === 'palette' && isHovered}
-		class:border-white-30={!(iconType === 'palette' && isHovered)}
+		class:border-white-30={!isHovered}
 		class:shadow-[0_0_0_1px_rgba(59,130,246,0.3)]={iconType === 'palette' && isHovered}
-		style="transform: perspective(1000px) rotateX({rotateX}deg) rotateY({rotateY}deg); transform-style: preserve-3d; will-change: transform; border-color: {iconType ===
-			'palette' && isHovered
-			? 'rgba(96, 165, 250, 0.5)'
+		style="transform: perspective(1000px) rotateX({rotateX}deg) rotateY({rotateY}deg); transform-style: preserve-3d; will-change: transform; border-color: {isHovered
+			? iconType === 'cog'
+				? 'rgba(192, 132, 252, 0.5)'
+				: iconType === 'sparkles'
+					? 'rgba(34, 211, 238, 0.5)'
+					: 'rgba(96, 165, 250, 0.5)'
 			: 'rgba(255, 255, 255, 0.1)'};"
 	>
 		<!-- 1. Engineering: Circuit Diagram & Flowing Data (Preserved) -->
@@ -131,15 +136,21 @@
 				class="absolute inset-0 z-0 opacity-0 transition-opacity duration-700 delay-100 ease-[cubic-bezier(0.23,1,0.32,1)]"
 				class:opacity-[0.15]={isHovered}
 			>
-				<svg class="h-full w-full stroke-blue-900/60" style="stroke-width: 1px; fill: none;">
+				<svg
+					class="h-full w-full stroke-blue-900/60 dark:stroke-cyan-300/80"
+					style="stroke-width: 1.5px; fill: none;"
+				>
 					<path d="M40 0 V60 H100 V120" stroke-dasharray="2 2" />
 					<path d="M160 340 V200 H240 V100" stroke-dasharray="2 2" />
 					<path d="M300 0 V150 H200" stroke-dasharray="2 2" />
-					<circle cx="100" cy="120" r="3" class="fill-blue-900/60" />
-					<circle cx="240" cy="100" r="3" class="fill-blue-900/60" />
-					<circle cx="200" cy="150" r="3" class="fill-blue-900/60" />
+					<circle cx="100" cy="120" r="3" class="fill-blue-900/60 dark:fill-cyan-300/80" />
+					<circle cx="240" cy="100" r="3" class="fill-blue-900/60 dark:fill-cyan-300/80" />
+					<circle cx="200" cy="150" r="3" class="fill-blue-900/60 dark:fill-cyan-300/80" />
 					{#if isHovered}
-						<circle r="2" class="fill-blue-500">
+						<circle
+							r="3"
+							class="fill-blue-500 dark:fill-cyan-200 shadow-[0_0_10px_rgba(34,211,238,0.8)]"
+						>
 							<animateMotion
 								dur="2s"
 								repeatCount="indefinite"
@@ -149,7 +160,10 @@
 								calcMode="linear"
 							/>
 						</circle>
-						<circle r="2" class="fill-blue-500">
+						<circle
+							r="3"
+							class="fill-blue-500 dark:fill-cyan-200 shadow-[0_0_10px_rgba(34,211,238,0.8)]"
+						>
 							<animateMotion
 								dur="3s"
 								repeatCount="indefinite"
@@ -159,7 +173,10 @@
 								calcMode="linear"
 							/>
 						</circle>
-						<circle r="2" class="fill-blue-500">
+						<circle
+							r="3"
+							class="fill-blue-500 dark:fill-cyan-200 shadow-[0_0_10px_rgba(34,211,238,0.8)]"
+						>
 							<animateMotion
 								dur="2.5s"
 								repeatCount="indefinite"
@@ -171,12 +188,96 @@
 						</circle>
 					{/if}
 				</svg>
+
+				<!-- Matrix Code Rain Effect -->
+				{#if isHovered}
+					<div
+						class="absolute inset-0 overflow-hidden opacity-30 dark:opacity-50 mix-blend-overlay"
+					>
+						<svg
+							class="h-full w-full"
+							style="fill: #d8b4fe; font-size: 10px; font-family: monospace;"
+						>
+							<text x="10" y="20" class="animate-matrix-1">0 1 0 1 1</text>
+							<text x="50" y="40" class="animate-matrix-2">1 0 1 0 0</text>
+							<text x="90" y="10" class="animate-matrix-3">func()</text>
+							<text x="20" y="80" class="animate-matrix-1">const x=1</text>
+							<text x="120" y="60" class="animate-matrix-2">1 1 0 1</text>
+							<text x="160" y="30" class="animate-matrix-3">wait()</text>
+							<text x="10" y="150" class="animate-matrix-1">0 1 1 0</text>
+							<text x="80" y="120" class="animate-matrix-2">return</text>
+							<text x="140" y="180" class="animate-matrix-3">1 0 0 1</text>
+						</svg>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- 2. Design: UI Grid & Golden Ratio (Palette) -->
+		{#if iconType === 'palette'}
+			<div
+				class="absolute inset-0 z-0 opacity-0 transition-opacity duration-700 ease-out"
+				class:opacity-[0.1]={!isHovered}
+				class:opacity-[0.3]={isHovered}
+			>
+				{#if isHovered}
+					<!-- Golden Ratio & Grid -->
+					<svg
+						class="absolute inset-0 h-full w-full stroke-blue-500/40 dark:stroke-white/30"
+						style="fill: none; stroke-width: 0.5;"
+					>
+						<!-- Grid -->
+						<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+							<path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" stroke-width="0.5" />
+						</pattern>
+						<rect width="100%" height="100%" fill="url(#grid)" />
+
+						<!-- Golden Spiral (Approximation) -->
+						<path d="M 200 200 A 100 100 0 0 1 300 300" stroke-width="1" class="opacity-50" />
+						<circle cx="200" cy="200" r="150" stroke-width="0.5" stroke-dasharray="4 4" />
+						<rect x="50" y="50" width="100" height="61.8" stroke-width="1" />
+					</svg>
+				{/if}
 			</div>
 		{/if}
 
 		<!-- 3. Creative Tech: Projector Spotlight & Lens Distortion -->
+		<!-- 3. Creative Tech: Particles & Projector (Sparkles) -->
 		{#if iconType === 'sparkles'}
 			<div class="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[2.5rem]">
+				<!-- Layer 1: Base Grid (Faint, Static) -->
+				<div
+					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1.5px,transparent_1.5px)] [background-size:20px_20px] opacity-[0.05]"
+				></div>
+
+				{#if isHovered}
+					<!-- Layer 2: Scan Light (Inversion Effect) -->
+					<div
+						class="absolute inset-0 z-10 mix-blend-exclusion"
+						transition:fade={{ duration: 200 }}
+						style="
+							background: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, rgba(255, 255, 255, 0.3), transparent 100%);
+						"
+					></div>
+
+					<!-- Layer 3: Data Grid (Masked Dots) -->
+					<div
+						class="absolute inset-0 z-20 opacity-70 bg-[radial-gradient(#00f2ff_1.5px,transparent_1.5px)] [background-size:10px_10px]"
+						style="
+							mask-image: radial-gradient(circle 200px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 80%);
+							-webkit-mask-image: radial-gradient(circle 200px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 80%);
+						"
+					></div>
+
+					<!-- Layer 4: Border Glow (Scanner Effect) -->
+					<div
+						class="absolute inset-0 z-30 border-2 border-cyan-400 rounded-[2.5rem] opacity-100"
+						style="
+							mask-image: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 70%);
+							-webkit-mask-image: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 70%);
+						"
+					></div>
+				{/if}
 				<!-- Single Pulse Ring on Hover -->
 				{#if isHovered}
 					<div
@@ -187,32 +288,36 @@
 
 				<!-- Layer 1: Base Grid (Faint, Static) -->
 				<div
-					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1px,transparent_1px)] [background-size:20px_20px] opacity-[0.03]"
+					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1.5px,transparent_1.5px)] [background-size:20px_20px] opacity-[0.05]"
 				></div>
 
-				{#if isHovered}
-					<!-- Layer 2: Lens Grid (Magnified & Distorted) -->
-					<!-- Masked by the spotlight position to reveal only local distortion -->
+				{#if isHovered && theme.isSpotlightEnabled}
+					<!-- Layer 2: Scan Light (Inversion Effect) -->
 					<div
-						class="absolute inset-0 z-10 opacity-30 bg-[radial-gradient(#00f2ff_1px,transparent_1px)] [background-size:20px_20px] will-change-transform"
+						class="absolute inset-0 z-10 mix-blend-exclusion"
+						transition:fade={{ duration: 200 }}
 						style="
-							transform: scale(1.15); 
-							transform-origin: {$spotlightPos.x}px {$spotlightPos.y}px;
-							mask-image: radial-gradient(circle 120px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent);
-							-webkit-mask-image: radial-gradient(circle 120px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent);
+							background: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, rgba(255, 255, 255, 0.3), transparent 100%);
 						"
 					></div>
 
-					<!-- Layer 3: Spotlight Glow (Cyan Tint) -->
-					{#if theme.isSpotlightEnabled}
-						<div
-							class="absolute inset-0 z-20 mix-blend-plus-lighter pointer-events-none"
-							transition:fade={{ duration: 300 }}
-							style="
-								background: radial-gradient(circle 300px at {$spotlightPos.x}px {$spotlightPos.y}px, rgba(255, 255, 255, 0.1), transparent 100%);
-							"
-						></div>
-					{/if}
+					<!-- Layer 3: Data Grid (Masked Dots) -->
+					<div
+						class="absolute inset-0 z-20 opacity-70 bg-[radial-gradient(#00f2ff_1.5px,transparent_1.5px)] [background-size:10px_10px]"
+						style="
+							mask-image: radial-gradient(circle 200px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 80%);
+							-webkit-mask-image: radial-gradient(circle 200px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 80%);
+						"
+					></div>
+
+					<!-- Layer 4: Border Glow (Scanner Effect) -->
+					<div
+						class="absolute inset-0 z-30 border-2 border-cyan-400 rounded-[2.5rem] opacity-100"
+						style="
+							mask-image: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 70%);
+							-webkit-mask-image: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 70%);
+						"
+					></div>
 				{/if}
 			</div>
 		{/if}
@@ -233,6 +338,7 @@
 					class="flex h-12 w-12 items-center justify-center rounded-2xl {iconBgColor} transition-transform duration-500 ease-out group-hover:scale-110"
 					class:shadow-xl={iconType === 'palette' && isHovered}
 					class:shadow-pink-200={iconType === 'palette' && isHovered}
+					class:animate-float={iconType === 'palette' && isHovered}
 					class:animate-snap-move={iconType === 'palette' && isHovered}
 					style="animation-delay: 0.1s;"
 				>
@@ -249,20 +355,24 @@
 						: '0px'}); transition: transform 0.6s cubic-bezier(0.25,1,0.5,1);"
 				>
 					<h3
-						class="text-xl font-bold tracking-tighter text-gray-900 dark:text-white dark:text-glow"
+						class="text-xl font-bold tracking-tighter text-gray-900 dark:text-white transition-all duration-300"
 						class:animate-snap-move={iconType === 'palette' && isHovered}
-						style="font-family: 'Noto Sans JP', sans-serif; animation-delay: 0.2s;"
+						style="
+							font-family: 'Noto Sans JP', sans-serif; 
+							animation-delay: 0.2s;
+							text-shadow: {isHovered ? '0 0 15px rgba(255,255,255,0.4)' : 'none'};
+						"
 					>
 						{title}
 					</h3>
 					<!-- Design: Leading Line (Title) -->
 					{#if iconType === 'palette'}
 						<div
-							class="absolute -bottom-1 left-0 h-[1px] bg-zinc-400 dark:bg-white/30 transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+							class="absolute -bottom-1 left-0 h-[1px] bg-zinc-400 dark:bg-purple-400/50 transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
 							style="width: {isHovered ? '100%' : '0%'}; transition-delay: 0.1s;"
 						>
 							<div
-								class="absolute right-0 -top-[1.5px] h-[4px] w-[4px] rounded-full bg-zinc-400 dark:bg-white/80 shadow-[0_0_4px_rgba(161,161,170,0.8)] opacity-0 transition-opacity duration-300"
+								class="absolute right-0 -top-[1.5px] h-[4px] w-[4px] rounded-full bg-zinc-400 dark:bg-purple-300/80 shadow-[0_0_4px_rgba(161,161,170,0.8)] dark:shadow-[0_0_8px_rgba(192,132,252,0.8)] opacity-0 transition-opacity duration-300"
 								class:opacity-100={isHovered}
 							></div>
 						</div>
@@ -288,11 +398,11 @@
 					<!-- Design: Leading Line (Description) -->
 					{#if iconType === 'palette'}
 						<div
-							class="absolute -bottom-1 left-0 h-[1px] bg-zinc-400/60 dark:bg-white/30 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+							class="absolute -bottom-1 left-0 h-[1px] bg-zinc-400/60 dark:bg-purple-400/30 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
 							style="width: {isHovered ? '100%' : '0%'}; transition-delay: 0.4s;"
 						>
 							<div
-								class="absolute right-0 -top-[1.5px] h-[3px] w-[3px] rounded-full bg-zinc-400 dark:bg-white/60 shadow-[0_0_4px_rgba(161,161,170,0.6)] opacity-0 transition-opacity duration-300"
+								class="absolute right-0 -top-[1.5px] h-[3px] w-[3px] rounded-full bg-zinc-400 dark:bg-purple-300/60 shadow-[0_0_4px_rgba(161,161,170,0.6)] dark:shadow-[0_0_8px_rgba(192,132,252,0.6)] opacity-0 transition-opacity duration-300"
 								class:opacity-100={isHovered}
 							></div>
 						</div>
@@ -354,5 +464,55 @@
 	}
 	.animate-single-pulse {
 		animation: single-pulse 1s cubic-bezier(0, 0, 0.2, 1) forwards;
+	}
+
+	@keyframes matrix-fall {
+		0% {
+			transform: translateY(-20px);
+			opacity: 0;
+		}
+		20% {
+			opacity: 1;
+		}
+		100% {
+			transform: translateY(100px);
+			opacity: 0;
+		}
+	}
+	.animate-matrix-1 {
+		animation: matrix-fall 3s linear infinite;
+	}
+	.animate-matrix-2 {
+		animation: matrix-fall 4s linear infinite 0.5s;
+	}
+	.animate-matrix-3 {
+		animation: matrix-fall 5s linear infinite 1s;
+	}
+
+	@keyframes float-particle {
+		0% {
+			transform: translateY(0) translateX(0);
+			opacity: 0;
+		}
+		50% {
+			opacity: 1;
+		}
+		100% {
+			transform: translateY(-50px) translateX(20px);
+			opacity: 0;
+		}
+	}
+
+	@keyframes float {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-8px);
+		}
+	}
+	.animate-float {
+		animation: float 3s ease-in-out infinite;
 	}
 </style>
