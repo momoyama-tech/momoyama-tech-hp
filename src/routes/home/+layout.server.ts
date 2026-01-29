@@ -83,7 +83,8 @@ export async function load({ setHeaders }) {
             description: p.description,
             tags: p.tags,
             coverUrl: p.coverUrl,
-            url: p.url
+            url: p.url,
+            creator: p.creator
         }));
 
         return {

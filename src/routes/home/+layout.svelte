@@ -347,10 +347,14 @@
 					style="
 						min-height: 25rem;
 						-webkit-mask-image: {theme.isDark
-						? `radial-gradient(circle 300px at ${heroMaskPos.x}px ${heroMaskPos.y}px, black 0%, black 20%, rgba(0,0,0,0.01) 70%)`
+						? theme.isSpotlightEnabled
+							? `radial-gradient(circle 300px at ${heroMaskPos.x}px ${heroMaskPos.y}px, black 0%, black 20%, rgba(0,0,0,0.01) 70%)`
+							: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0))'
 						: 'none'};
 						mask-image: {theme.isDark
-						? `radial-gradient(circle 300px at ${heroMaskPos.x}px ${heroMaskPos.y}px, black 0%, black 20%, rgba(0,0,0,0.01) 70%)`
+						? theme.isSpotlightEnabled
+							? `radial-gradient(circle 300px at ${heroMaskPos.x}px ${heroMaskPos.y}px, black 0%, black 20%, rgba(0,0,0,0.01) 70%)`
+							: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0))'
 						: 'none'};
 					"
 				>
