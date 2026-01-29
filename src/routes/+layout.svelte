@@ -137,7 +137,7 @@
 
 <!-- Navigation -->
 <nav
-	class="fixed left-0 right-0 top-0 z-50 transition-all duration-300 border-b border-[rgba(0,0,0,0.05)] {scrolled
+	class="fixed left-0 right-0 top-0 z-[10001] transition-all duration-300 border-b border-[rgba(0,0,0,0.05)] {scrolled
 		? 'bg-[rgba(255,255,255,0.8)] backdrop-blur-[20px] dark:bg-black/80'
 		: 'bg-[rgba(255,255,255,0.8)] backdrop-blur-[20px] dark:bg-black/80'}"
 >
@@ -261,7 +261,7 @@
 	<!-- Mobile menu -->
 	{#if isMenuOpen}
 		<div
-			class="fixed inset-0 top-16 z-40 bg-white/95 backdrop-blur-md md:hidden dark:bg-black/95 flex flex-col"
+			class="fixed inset-0 top-16 z-[10000] bg-white/95 backdrop-blur-md md:hidden dark:bg-black/95 flex flex-col"
 			transition:fade={{ duration: 200 }}
 		>
 			<div class="flex-1 space-y-2 px-6 py-8 overflow-y-auto">
@@ -310,9 +310,12 @@
 						</div>
 
 						<div class="flex flex-col gap-1 items-end">
-							<span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Language</span
+							<span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Settings</span
 							>
-							<LanguageSwitcher />
+							<div class="flex items-center gap-3">
+								<ThemeSwitcher />
+								<LanguageSwitcher />
+							</div>
 						</div>
 					</div>
 				</div>
