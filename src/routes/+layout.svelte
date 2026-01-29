@@ -1,6 +1,7 @@
 <script>
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import logo from '$lib/assets/logo.png';
 	import { fly, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	// Direct imports to avoid SSR issues
@@ -14,7 +15,6 @@
 	import { spring } from 'svelte/motion';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import ThemeSwitcher from '$lib/components/ThemeSwitcher.svelte';
-	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import { theme } from '$lib/stores/theme.svelte.js';
 
 	let { children } = $props();
@@ -148,7 +148,8 @@
 				href="/"
 				class="flex items-center gap-2 font-medium transition-colors text-[#1D1D1F] dark:text-white"
 			>
-				<img src={favicon} alt="" class="h-8 w-8" />
+				>
+				<img src={logo} alt="Momoyama Tech Logo" class="h-8 w-auto dark:invert" />
 				<span class="hidden text-sm sm:inline font-medium tracking-[-0.02em]">MOMOYAMA TECH</span>
 			</a>
 
@@ -514,7 +515,6 @@
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
 
 <!-- Command Palette -->
-<CommandPalette />
 
 <style>
 	:global(html.dark) {
