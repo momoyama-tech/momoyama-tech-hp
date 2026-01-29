@@ -11,6 +11,11 @@
 	import Mail from 'lucide-svelte/icons/mail';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import ContactModal from '$lib/components/ContactModal.svelte';
+	import { spring } from 'svelte/motion';
+	import Loader2 from 'lucide-svelte/icons/loader-2';
+	import ThemeSwitcher from '$lib/components/ThemeSwitcher.svelte';
+	import CommandPalette from '$lib/components/CommandPalette.svelte';
+	import { theme } from '$lib/stores/theme.svelte.js';
 
 	let { children } = $props();
 
@@ -33,6 +38,28 @@
 		}
 	});
 
+	// Handle custom events from Command Palette or other components
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			const handleOpenContact = () => openContactModal();
+			/** @param {KeyboardEvent} e */
+			const handleKeydown = (e) => {
+				if (
+					e.key.toLowerCase() === 'l' &&
+					!['INPUT', 'TEXTAREA'].includes(/** @type {HTMLElement} */ (e.target).tagName)
+				) {
+					theme.toggleSpotlight();
+				}
+			};
+			window.addEventListener('open-contact', handleOpenContact);
+			window.addEventListener('keydown', handleKeydown);
+			return () => {
+				window.removeEventListener('open-contact', handleOpenContact);
+				window.removeEventListener('keydown', handleKeydown);
+			};
+		}
+	});
+
 	import { language } from '$lib/stores/language.svelte.js';
 	import { translations } from '$lib/i18n/translations.js';
 
@@ -46,6 +73,54 @@
 
 	let showContactModal = $state(false);
 	let showToast = $state(false);
+
+	// Quick Contact Button State
+	let isFooterSuccess = $state(false);
+	let footerSpotlightPos = spring({ x: 0, y: 0 }, { stiffness: 0.1, damping: 0.25 });
+	let footerBtnElement = $state();
+
+	function openContactModal() {
+		showContactModal = true;
+	}
+	/*
+		isFooterSending = true;
+
+		try {
+			const formData = new FormData();
+			formData.append('type', 'quick');
+
+			const response = await fetch('/contact', {
+				method: 'POST',
+				body: formData
+			});
+
+			if (response.ok) {
+				isFooterSuccess = true;
+				// Reset success state after animation
+				setTimeout(() => {
+					isFooterSuccess = false;
+				}, 3000);
+			} else {
+				// Fallback to modal on error
+				showContactModal = true;
+			}
+		} catch (e) {
+			console.error(e);
+			showContactModal = true;
+		} finally {
+			isFooterSending = false;
+		}
+	*/
+
+	/** @param {MouseEvent} e */
+	function handleFooterBtnMove(e) {
+		if (!footerBtnElement) return;
+		const rect = footerBtnElement.getBoundingClientRect();
+		footerSpotlightPos.set({
+			x: e.clientX - rect.left,
+			y: e.clientY - rect.top
+		});
+	}
 </script>
 
 <svelte:head>
@@ -117,7 +192,51 @@
 							</svg>
 						</a>
 					</div>
-					<div class="scale-100 origin-right">
+					<div class="scale-100 origin-right flex items-center gap-3">
+						<div class="hidden sm:flex items-center gap-2">
+							<button
+								class="p-2 rounded-full transition-colors text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white"
+								onclick={theme.toggleSpotlight}
+								title="Toggle Spotlight (L)"
+							>
+								{#if theme.isSpotlightEnabled}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="20"
+										height="20"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										class="lucide lucide-lightbulb"
+										><path
+											d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"
+										/><path d="M9 18h6" /><path d="M10 22h4" /></svg
+									>
+								{:else}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="20"
+										height="20"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										class="lucide lucide-lightbulb-off"
+										><path d="M16.8 11.2c.8-.9 1.2-2 1.2-3.2a6 6 0 0 0-9.3-5" /><path
+											d="M2 2l20 20"
+										/><path d="M6.3 6.3a4.67 4.67 0 0 0-1.2 5.2c.7.7 1.3 1.5 1.5 2.5" /><path
+											d="M9 18h6"
+										/><path d="M10 22h4" /></svg
+									>
+								{/if}
+							</button>
+							<ThemeSwitcher />
+						</div>
 						<LanguageSwitcher />
 					</div>
 				</div>
@@ -254,11 +373,21 @@
 							{t.footer.official}
 							<ExternalLink class="h-3 w-3" />
 						</a>
-						<a
-							href="mailto:tech@andrew.ac.jp"
-							class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white"
-							>{t.footer.contact}</a
-						>
+						<div class="relative flex items-center gap-2">
+							<button
+								onclick={openContactModal}
+								class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white text-left"
+							>
+								{t.footer.contact}
+							</button>
+							{#if isFooterSuccess}
+								<span
+									class="inline-flex items-center text-xs font-bold text-green-500 animate-pulse transition-opacity duration-500"
+								>
+									{t.footer.sent || 'Sent!'}
+								</span>
+							{/if}
+						</div>
 					</div>
 				</div>
 			</div>
@@ -313,13 +442,36 @@
 					</a>
 
 					<button
-						onclick={() => (showContactModal = true)}
+						bind:this={footerBtnElement}
+						onclick={openContactModal}
+						onmousemove={handleFooterBtnMove}
 						title={t.footer.contact}
-						class="group flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/20 cursor-pointer dark:bg-zinc-800 dark:hover:bg-blue-600"
+						class="group relative flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/20 cursor-pointer dark:bg-zinc-800 overflow-hidden"
+						class:bg-green-100={isFooterSuccess}
+						class:dark:bg-green-900={isFooterSuccess}
 					>
-						<Mail
-							class="h-7 w-7 text-gray-900 transition-colors duration-300 group-hover:text-blue-600 dark:text-white dark:group-hover:text-white"
-						/>
+						<!-- Spotlight -->
+						<div
+							class="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+							style="
+								background: radial-gradient(circle 80px at {$footerSpotlightPos.x}px {$footerSpotlightPos.y}px, rgba(0, 242, 255, 0.15), transparent 70%);
+							"
+						></div>
+
+						<!-- Success Pulse -->
+						{#if isFooterSuccess}
+							<div
+								class="absolute inset-0 rounded-2xl border-2 border-green-500 opacity-0 animate-success-ripple"
+							></div>
+						{/if}
+
+						{#if isFooterSuccess}
+							<Mail class="h-7 w-7 text-green-600 dark:text-green-400" />
+						{:else}
+							<Mail
+								class="relative z-10 h-7 w-7 text-gray-900 transition-colors duration-300 group-hover:text-blue-600 dark:text-white dark:group-hover:text-white"
+							/>
+						{/if}
 					</button>
 				</div>
 			</div>
@@ -329,8 +481,10 @@
 				onClose={() => (showContactModal = false)}
 				onSuccess={() => {
 					showToast = true;
+					isFooterSuccess = true;
 					setTimeout(() => {
 						showToast = false;
+						isFooterSuccess = false;
 					}, 5000);
 				}}
 			/>
@@ -355,3 +509,30 @@
 		</div>
 	</div>
 </footer>
+
+<!-- Scan Line Overlay -->
+<div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
+
+<!-- Command Palette -->
+<CommandPalette />
+
+<style>
+	:global(html.dark) {
+		color-scheme: dark;
+	}
+	@keyframes success-ripple {
+		0% {
+			transform: scale(1);
+			opacity: 0.8;
+			border-width: 4px;
+		}
+		100% {
+			transform: scale(2);
+			opacity: 0;
+			border-width: 0px;
+		}
+	}
+	.animate-success-ripple {
+		animation: success-ripple 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+	}
+</style>

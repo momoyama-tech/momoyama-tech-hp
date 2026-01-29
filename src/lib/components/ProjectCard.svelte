@@ -3,6 +3,7 @@
 	import { cubicOut } from 'svelte/easing';
 	// Direct import to avoid SSR issues
 	import ExternalLink from 'lucide-svelte/icons/external-link';
+	import { theme } from '$lib/stores/theme.svelte.js';
 
 	/**
 	 * @type {{
@@ -32,7 +33,8 @@
 	href={project.url}
 	target="_blank"
 	rel="noopener noreferrer"
-	class="project-card group block overflow-hidden rounded-3xl transition-all duration-500 hover:-translate-y-2"
+	class="project-card group block overflow-hidden rounded-3xl transition-all duration-500 hover:-translate-y-2 dark:bg-zinc-900/40 dark:border-white/10 dark:backdrop-blur-xl dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.3)]"
+	class:border-glow={theme.isScanLineActive}
 	style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(50px); border: 1px solid rgba(243, 244, 246, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);"
 >
 	<!-- Cover Image -->
@@ -47,9 +49,12 @@
 			/>
 		{:else}
 			<div
-				class="flex h-full items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50"
+				class="flex h-full items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-zinc-900 dark:to-black"
 			>
-				<span class="text-6xl opacity-30">📁</span>
+				<span
+					class="text-6xl opacity-30 dark:opacity-80 dark:text-cyan-400 dark:drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+					>📁</span
+				>
 			</div>
 		{/if}
 
@@ -57,7 +62,7 @@
 		{#if project.category}
 			<div class="absolute left-4 top-4">
 				<span
-					class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm"
+					class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm dark:bg-cyan-500/20 dark:text-cyan-300 dark:border dark:border-cyan-500/30"
 					style="background: rgba(255,255,255,0.9); color: #1D1D1F;"
 				>
 					{project.category}
@@ -70,7 +75,7 @@
 			class="absolute right-4 top-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
 		>
 			<span
-				class="flex h-8 w-8 items-center justify-center rounded-full"
+				class="flex h-8 w-8 items-center justify-center rounded-full dark:bg-cyan-500 dark:text-black"
 				style="background: rgba(255,255,255,0.9);"
 			>
 				<ExternalLink class="h-4 w-4" style="color: #1D1D1F;" />
@@ -80,7 +85,10 @@
 
 	<!-- Content -->
 	<div class="p-6">
-		<h3 class="mb-2 text-lg font-semibold transition-colors" style="color: #1D1D1F;">
+		<h3
+			class="mb-2 text-lg font-semibold transition-colors dark:text-zinc-100 dark:text-glow"
+			style="color: #1D1D1F;"
+		>
 			{project.title}
 		</h3>
 
@@ -98,7 +106,7 @@
 
 		<!-- Creator -->
 		{#if project.creator}
-			<p class="text-xs" style="color: #8B8B8B;">
+			<p class="text-xs dark:text-zinc-500" style="color: #8B8B8B;">
 				by {project.creator}
 			</p>
 		{/if}

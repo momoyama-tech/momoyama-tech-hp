@@ -96,14 +96,14 @@
 		{#if visible}
 			<div class="mb-16">
 				<h2
-					class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl"
+					class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-colors dark:text-white dark:text-glow"
 					style="color: #1D1D1F;"
 					in:fly={{ y: 30, duration: 600, easing: cubicOut }}
 				>
 					{t.focus.title}
 				</h2>
 				<p
-					class="text-lg"
+					class="text-lg transition-colors dark:text-zinc-400"
 					style="color: #6B6B6B;"
 					in:fly={{ y: 30, delay: 100, duration: 600, easing: cubicOut }}
 				>

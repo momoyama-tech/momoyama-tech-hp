@@ -40,7 +40,9 @@ export const translations = {
             official: "桃山学院大学 公式",
             contactTitle: "お問い合わせ",
             emailLabel: "メールでお問い合わせ",
-            copySuccess: "メールアドレスをコピーしました"
+            copySuccess: "メールアドレスをコピーしました",
+            sending: "送信中...",
+            sent: "送信完了"
         },
         projects: {
             title: "みんなのプロジェクト",
@@ -104,7 +106,9 @@ export const translations = {
             official: "St. Andrew's University Official",
             contactTitle: "Contact",
             emailLabel: "Email Us",
-            copySuccess: "Email address copied"
+            copySuccess: "Email address copied",
+            sending: "Sending...",
+            sent: "Sent!"
         },
         projects: {
             title: "Our Projects",

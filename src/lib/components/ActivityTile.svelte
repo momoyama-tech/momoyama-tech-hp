@@ -6,6 +6,7 @@
 	import Cog from 'lucide-svelte/icons/cog';
 	import Palette from 'lucide-svelte/icons/palette';
 	import Sparkles from 'lucide-svelte/icons/sparkles';
+	import { theme } from '$lib/stores/theme.svelte.js';
 
 	/** @type {{ title: string, description: string, iconType?: 'cog' | 'palette' | 'sparkles' }} */
 	let { title, description, iconType = 'cog' } = $props();
@@ -113,7 +114,8 @@
 
 	<div
 		bind:this={tileElement}
-		class="group relative flex h-full flex-col justify-between overflow-hidden rounded-[2.5rem] border bg-white/20 p-10 text-left backdrop-blur-xl transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
+		class="group relative flex h-full flex-col justify-between overflow-hidden rounded-[2.5rem] border bg-white/20 p-10 text-left backdrop-blur-xl transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] dark:bg-zinc-900/40 dark:border-white/10"
+		class:border-glow={theme.isScanLineActive}
 		class:border-blue-400={iconType === 'palette' && isHovered}
 		class:border-blue-400-30={iconType === 'palette' && isHovered}
 		class:border-white-30={!(iconType === 'palette' && isHovered)}
@@ -121,7 +123,7 @@
 		style="transform: perspective(1000px) rotateX({rotateX}deg) rotateY({rotateY}deg); transform-style: preserve-3d; will-change: transform; border-color: {iconType ===
 			'palette' && isHovered
 			? 'rgba(96, 165, 250, 0.5)'
-			: 'rgba(255, 255, 255, 0.3)'};"
+			: 'rgba(255, 255, 255, 0.1)'};"
 	>
 		<!-- 1. Engineering: Circuit Diagram & Flowing Data (Preserved) -->
 		{#if iconType === 'cog'}
@@ -172,13 +174,17 @@
 			</div>
 		{/if}
 
-		<!-- 2. Design: UI Specs & Parallax Grid (Removed for Leading Line Focus) -->
-		<!-- No persistent background for Design, focused on content interaction -->
-
-		<!-- 3. Creative Tech: SF Scanline & Single Pulse (Lightweight) -->
 		<!-- 3. Creative Tech: Projector Spotlight & Lens Distortion -->
 		{#if iconType === 'sparkles'}
 			<div class="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[2.5rem]">
+				<!-- Single Pulse Ring on Hover -->
+				{#if isHovered}
+					<div
+						class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-400 opacity-0 animate-single-pulse"
+						style="width: 0; height: 0;"
+					></div>
+				{/if}
+
 				<!-- Layer 1: Base Grid (Faint, Static) -->
 				<div
 					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1px,transparent_1px)] [background-size:20px_20px] opacity-[0.03]"
@@ -198,12 +204,15 @@
 					></div>
 
 					<!-- Layer 3: Spotlight Glow (Cyan Tint) -->
-					<div
-						class="absolute inset-0 z-20 mix-blend-plus-lighter pointer-events-none"
-						style="
-							background: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, rgba(0, 242, 255, 0.08), transparent 70%);
-						"
-					></div>
+					{#if theme.isSpotlightEnabled}
+						<div
+							class="absolute inset-0 z-20 mix-blend-plus-lighter pointer-events-none"
+							transition:fade={{ duration: 300 }}
+							style="
+								background: radial-gradient(circle 300px at {$spotlightPos.x}px {$spotlightPos.y}px, rgba(255, 255, 255, 0.1), transparent 100%);
+							"
+						></div>
+					{/if}
 				{/if}
 			</div>
 		{/if}
@@ -240,7 +249,7 @@
 						: '0px'}); transition: transform 0.6s cubic-bezier(0.25,1,0.5,1);"
 				>
 					<h3
-						class="text-xl font-bold tracking-tighter text-gray-900"
+						class="text-xl font-bold tracking-tighter text-gray-900 dark:text-white dark:text-glow"
 						class:animate-snap-move={iconType === 'palette' && isHovered}
 						style="font-family: 'Noto Sans JP', sans-serif; animation-delay: 0.2s;"
 					>
@@ -249,11 +258,11 @@
 					<!-- Design: Leading Line (Title) -->
 					{#if iconType === 'palette'}
 						<div
-							class="absolute -bottom-1 left-0 h-[1px] bg-zinc-400 transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+							class="absolute -bottom-1 left-0 h-[1px] bg-zinc-400 dark:bg-white/30 transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
 							style="width: {isHovered ? '100%' : '0%'}; transition-delay: 0.1s;"
 						>
 							<div
-								class="absolute right-0 -top-[1.5px] h-[4px] w-[4px] rounded-full bg-zinc-400 shadow-[0_0_4px_rgba(161,161,170,0.8)] opacity-0 transition-opacity duration-300"
+								class="absolute right-0 -top-[1.5px] h-[4px] w-[4px] rounded-full bg-zinc-400 dark:bg-white/80 shadow-[0_0_4px_rgba(161,161,170,0.8)] opacity-0 transition-opacity duration-300"
 								class:opacity-100={isHovered}
 							></div>
 						</div>
@@ -268,7 +277,7 @@
 						: '0px'}); transition: transform 0.6s cubic-bezier(0.25,1,0.5,1);"
 				>
 					<p
-						class="text-sm font-medium leading-relaxed text-gray-600"
+						class="text-sm font-medium leading-relaxed text-gray-600 dark:text-zinc-400"
 						class:animate-snap-move={iconType === 'palette' && isHovered}
 						style="font-family: 'Inter', sans-serif; opacity: {isHovered
 							? 1
@@ -279,11 +288,11 @@
 					<!-- Design: Leading Line (Description) -->
 					{#if iconType === 'palette'}
 						<div
-							class="absolute -bottom-1 left-0 h-[1px] bg-zinc-400/60 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+							class="absolute -bottom-1 left-0 h-[1px] bg-zinc-400/60 dark:bg-white/30 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
 							style="width: {isHovered ? '100%' : '0%'}; transition-delay: 0.4s;"
 						>
 							<div
-								class="absolute right-0 -top-[1.5px] h-[3px] w-[3px] rounded-full bg-zinc-400 shadow-[0_0_4px_rgba(161,161,170,0.6)] opacity-0 transition-opacity duration-300"
+								class="absolute right-0 -top-[1.5px] h-[3px] w-[3px] rounded-full bg-zinc-400 dark:bg-white/60 shadow-[0_0_4px_rgba(161,161,170,0.6)] opacity-0 transition-opacity duration-300"
 								class:opacity-100={isHovered}
 							></div>
 						</div>
@@ -326,5 +335,24 @@
 	}
 	.animate-flash-box {
 		animation: flash-box 0.4s ease-out forwards;
+	}
+
+	/* Creative Tech: Single Pulse Ring */
+	@keyframes single-pulse {
+		0% {
+			width: 0;
+			height: 0;
+			opacity: 0.8;
+			border-width: 2px;
+		}
+		100% {
+			width: 200%;
+			height: 200%;
+			opacity: 0;
+			border-width: 0;
+		}
+	}
+	.animate-single-pulse {
+		animation: single-pulse 1s cubic-bezier(0, 0, 0.2, 1) forwards;
 	}
 </style>

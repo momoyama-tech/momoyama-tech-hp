@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@variant dark (&:where(.dark, .dark *));
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
@@ -11,10 +12,89 @@ html {
 	scroll-behavior: smooth;
 }
 
+
+
+/* Custom dark mode variant overrides media query if present */
+:root:has(.dark) {
+    color-scheme: dark;
+}
+
+
+
+/* Correcting per User Request */
 body {
+    /* Light Mode: Laboratory (Soft Gray, Slow Pulse, Line/Graph Grid) */
+    --theme-accent: #9ca3af;
+    --theme-bg-grid: linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+    --theme-grid-size: 40px 40px;
+    --theme-pulse: cubic-bezier(0.4, 0, 0.6, 1);
+    --scan-line-color: rgba(0, 0, 0, 0.2);
+    
 	font-family: var(--font-sans);
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
+    
+    background-image: var(--theme-bg-grid);
+    background-size: var(--theme-grid-size);
+    transition: background-image 0.5s ease;
+}
+
+.dark body, .dark #root, .dark .app-container {
+    /* Dark Mode: Cyber (Cyan Blue, Sharp Fast Pulse, Dot Grid) */
+    --theme-accent: #06b6d4;
+    --theme-bg-grid: radial-gradient(#1f2937 1px, transparent 1px);
+    --theme-grid-size: 20px 20px;
+    --theme-pulse: cubic-bezier(0.1, 0.7, 1, 0.1);
+    --scan-line-color: #06b6d4;
+    
+    background-color: #000000 !important; /* Pure Black Force */
+    color: #ffffff !important; /* White Text Force */
+}
+
+/* Utilities for Cyber Mode */
+.text-glow {
+    text-shadow: 0 0 10px rgba(6, 182, 212, 0.5), 0 0 20px rgba(6, 182, 212, 0.3);
+}
+
+.border-glow {
+    animation: border-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes border-pulse {
+    0%, 100% { border-color: rgba(255, 255, 255, 0.1); box-shadow: 0 0 0 transparent; }
+    50% { border-color: rgba(6, 182, 212, 0.5); box-shadow: 0 0 15px rgba(6, 182, 212, 0.2); }
+}
+
+/* Smoke Glass Card Utility */
+.card-cyber {
+    background-color: rgba(255, 255, 255, 0.05); /* very thin white */
+    backdrop-filter: blur(24px); /* strong blur */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Global Scan Line Animation */
+.scan-line-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 10px;
+    background: var(--scan-line-color);
+    box-shadow: 0 0 20px var(--scan-line-color);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.scan-line-active {
+    animation: scan-down 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes scan-down {
+    0% { top: -20px; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 105%; opacity: 0; }
 }
 
 /* Dark mode detection */
