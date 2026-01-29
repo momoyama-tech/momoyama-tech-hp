@@ -14,7 +14,6 @@
 	import { spring } from 'svelte/motion';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import ThemeSwitcher from '$lib/components/ThemeSwitcher.svelte';
-	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import { theme } from '$lib/stores/theme.svelte.js';
 
 	let { children } = $props();
@@ -514,7 +513,6 @@
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
 
 <!-- Command Palette -->
-<CommandPalette />
 
 <style>
 	:global(html.dark) {

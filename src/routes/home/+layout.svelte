@@ -16,6 +16,7 @@
 	import ScheduleSection from '$lib/components/ScheduleSection.svelte';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
+	import SecretPalette from '$lib/components/SecretPalette.svelte';
 	import { reveal } from '$lib/actions/reveal.js';
 
 	let { data, children } = $props();
@@ -602,6 +603,9 @@
 
 <!-- Modal Insertion -->
 {@render children()}
+
+<!-- Secret Easter Egg -->
+<SecretPalette />
 
 <style>
 	@keyframes typing {
