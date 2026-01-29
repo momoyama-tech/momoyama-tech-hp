@@ -1,21 +1,21 @@
-<script>
+<script lang="ts">
 	import { fly, fade } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
 	import { cubicOut } from 'svelte/easing';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 
-	let { data } = $props();
+	let { data }: { data: any } = $props();
 
 	let selectedCategory = $state('All');
 
 	const filteredProjects = $derived(
 		selectedCategory === 'All'
 			? data.projects
-			: data.projects.filter((p) => p.category === selectedCategory)
+			: data.projects.filter((p: any) => p.category === selectedCategory)
 	);
 
-	function handleCategorySelect(category) {
+	function handleCategorySelect(category: string) {
 		selectedCategory = category;
 	}
 </script>

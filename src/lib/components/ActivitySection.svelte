@@ -96,8 +96,7 @@
 		{#if visible}
 			<div class="mb-16">
 				<h2
-					class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-colors dark:text-white dark:text-glow"
-					style="color: #1D1D1F;"
+					class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-colors text-[#1D1D1F] dark:text-white dark:text-glow"
 					in:fly={{ y: 30, duration: 600, easing: cubicOut }}
 				>
 					{t.focus.title}

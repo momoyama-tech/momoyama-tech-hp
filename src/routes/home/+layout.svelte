@@ -242,6 +242,49 @@
 		updateTranslations();
 	});
 
+	// Hero Mask Logic
+	let heroContainer = $state();
+	let heroMaskPos = $state({ x: -1000, y: -1000 });
+
+	$effect(() => {
+		if (heroContainer) {
+			const rect = heroContainer.getBoundingClientRect();
+			heroMaskPos = {
+				x: mouseX - rect.left,
+				y: mouseY - rect.top
+			};
+		}
+	});
+
+	// Reactive Light Detection for Headings
+	let projectsTitle = $state();
+	let newsTitle = $state();
+	let isProjectsLit = $state(false);
+	let isNewsLit = $state(false);
+
+	$effect(() => {
+		if (theme.isSpotlightEnabled) {
+			// removed isDark check to ensure logic runs even if user toggles, though mostly for dark mode
+			if (projectsTitle) {
+				const rect = projectsTitle.getBoundingClientRect();
+				const centerX = rect.left + rect.width / 2;
+				const centerY = rect.top + rect.height / 2;
+				const dist = Math.hypot(mouseX - centerX, mouseY - centerY);
+				isProjectsLit = dist < 300;
+			}
+			if (newsTitle) {
+				const rect = newsTitle.getBoundingClientRect();
+				const centerX = rect.left + rect.width / 2;
+				const centerY = rect.top + rect.height / 2;
+				const dist = Math.hypot(mouseX - centerX, mouseY - centerY);
+				isNewsLit = dist < 300;
+			}
+		} else {
+			isProjectsLit = false;
+			isNewsLit = false;
+		}
+	});
+
 	let displayNews = $derived(
 		language.current === 'EN' && translatedNews.length > 0 ? translatedNews : data.news
 	);
@@ -250,23 +293,36 @@
 <svelte:window onmousemove={handleMouseMove} bind:scrollY />
 
 <!-- Global Ambient Background & Spotlight -->
+<!-- Global Ambient Background & Spotlight -->
 <div
-	class="fixed inset-0 z-50 overflow-hidden pointer-events-none"
-	style="mix-blend-mode: color-dodge;"
+	class="fixed inset-0 z-[9999] overflow-hidden pointer-events-none"
+	style="mix-blend-mode: normal;"
 >
 	<div
-		class="absolute rounded-full transition-transform duration-75 ease-out will-change-transform"
+		class="absolute rounded-full transition-transform duration-75 ease-out will-change-transform flex items-center justify-center placeholder:overflow-hidden"
 		style="
 			width: 600px; 
 			height: 600px; 
 			left: -300px; 
 			top: -300px;
 			transform: translate({mouseX}px, {mouseY}px);
-			background: radial-gradient(circle closest-side, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.2) 60%, transparent 100%);
+			background: transparent;
+			backdrop-filter: brightness(1.5) contrast(1.5);
 			opacity: {theme.isDark && theme.isSpotlightEnabled ? 1 : 0};
 			transition: opacity 0.3s ease;
 		"
-	></div>
+	>
+		<!-- Grid Overlay inside Spotlight -->
+		<div
+			class="absolute inset-0 w-full h-full"
+			style="
+				background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+				background-size: 20px 20px;
+				mask-image: radial-gradient(circle closest-side, black, transparent 80%);
+				-webkit-mask-image: radial-gradient(circle closest-side, black, transparent 80%);
+			"
+		></div>
+	</div>
 </div>
 <div
 	class="fixed inset-0 -z-50 overflow-hidden pointer-events-none transition-colors duration-500 bg-[#FAFAFA] dark:bg-black"
@@ -284,12 +340,32 @@
 	>
 		<div class="w-full max-w-[1200px] mx-auto">
 			<div class="flex flex-col md:flex-row items-end w-full gap-12 md:gap-0">
-				<div class="w-full md:w-[70%] flex flex-col gap-1 md:gap-1" style="min-height: 25rem;">
+				<div
+					bind:this={heroContainer}
+					class="w-full md:w-[70%] flex flex-col gap-1 md:gap-1"
+					style="
+						min-height: 25rem;
+						-webkit-mask-image: {theme.isDark
+						? `radial-gradient(circle 300px at ${heroMaskPos.x}px ${heroMaskPos.y}px, black 0%, black 20%, rgba(0,0,0,0.01) 70%)`
+						: 'none'};
+						mask-image: {theme.isDark
+						? `radial-gradient(circle 300px at ${heroMaskPos.x}px ${heroMaskPos.y}px, black 0%, black 20%, rgba(0,0,0,0.01) 70%)`
+						: 'none'};
+					"
+				>
 					{#each heroTextEN as line, i}
 						<div class="overflow-hidden" style="min-height: clamp(2rem, 6vw, 4.5rem);">
 							<span
-								class="block text-black leading-[1.1] tracking-tighter break-words antialiased transition-colors duration-300 dark:text-zinc-800"
-								style="font-family: 'Inter', sans-serif; font-size: clamp(2rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -0.05em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
+								class="block text-black leading-[1.1] tracking-tighter break-words antialiased transition-colors duration-300 dark:text-white dark:opacity-100"
+								style="
+									font-family: 'Inter', sans-serif; 
+									font-size: clamp(2rem, 6vw, 4.5rem); 
+									font-weight: 800; 
+									letter-spacing: -0.05em; 
+									-webkit-font-smoothing: antialiased; 
+									-moz-osx-font-smoothing: grayscale; 
+									text-shadow: {theme.isDark ? '0 0 10px rgba(255, 255, 255, 0.8)' : 'none'};
+								"
 							>
 								{typedLines[i] || ''}{#if cursorPosition.line === i && cursorPosition.visible}<span
 										style="color: #000000; font-weight: 800; margin-left: 4px; display: inline-block; width: 4px;"
@@ -349,8 +425,8 @@
 			{#key language.current}
 				<div in:fade={{ duration: 300 }}>
 					<h2
-						class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-colors dark:text-white dark:text-glow"
-						style="color: #1A1A1A;"
+						bind:this={projectsTitle}
+						class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-all duration-300 text-[#1A1A1A] dark:text-white"
 					>
 						{t.projects.title}
 					</h2>
@@ -411,8 +487,8 @@
 	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
 		<div class="mb-16">
 			<h2
-				class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-colors dark:text-white dark:text-glow"
-				style="color: #1A1A1A;"
+				bind:this={newsTitle}
+				class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-all duration-300 text-[#1A1A1A] dark:text-white"
 			>
 				{t.news.title}
 			</h2>
@@ -492,10 +568,78 @@
 	<ScheduleSection scheduleData={displayScheduleData} pastEventsByMonth={data.pastEventsByMonth} />
 </div>
 
+<!-- Hidden Terminal Message (Interactive Playground) -->
+<div
+	class="relative flex h-32 w-full items-center justify-center overflow-hidden py-10"
+	role="presentation"
+>
+	<!-- Terminal Content: Visible only when spotlight (mask) is over it -->
+	<div
+		class="pointer-events-none sticky z-20 flex flex-col items-start justify-center gap-1 font-mono text-sm"
+		style="
+			mask-image: radial-gradient(circle 150px at {mouseX}px {mouseY}px, black, transparent 100%);
+			-webkit-mask-image: radial-gradient(circle 150px at {mouseX}px {mouseY}px, black, transparent 100%);
+			mask-attachment: fixed;
+			-webkit-mask-attachment: fixed;
+		"
+	>
+		<div
+			class="flex flex-col items-start gap-1 p-4 text-green-500 font-bold tracking-wider"
+			style="text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);"
+		>
+			<p class="overflow-hidden whitespace-nowrap animate-typing-1 border-r-2 border-green-500/0">
+				root@momoyama-tech:~$ access_granted...
+			</p>
+			<p class="overflow-hidden whitespace-nowrap animate-typing-2 opacity-0">
+				system_status: optimal
+			</p>
+			<p class="overflow-hidden whitespace-nowrap animate-typing-3 opacity-0">
+				hidden_message: "Innovation starts from the dark."
+			</p>
+		</div>
+	</div>
+</div>
+
 <!-- Modal Insertion -->
 {@render children()}
 
 <style>
+	@keyframes typing {
+		from {
+			width: 0;
+			border-color: transparent;
+		}
+		1% {
+			border-color: rgba(34, 197, 94, 0.8);
+		}
+		to {
+			width: 100%;
+			border-color: transparent;
+		}
+	}
+	@keyframes fade-in {
+		to {
+			opacity: 1;
+		}
+	}
+
+	.animate-typing-1 {
+		animation: typing 2s steps(40, end) forwards;
+		width: 0;
+	}
+	.animate-typing-2 {
+		animation:
+			typing 2s steps(40, end) forwards 2s,
+			fade-in 0.1s forwards 2s;
+		width: 0;
+	}
+	.animate-typing-3 {
+		animation:
+			typing 3s steps(40, end) forwards 4s,
+			fade-in 0.1s forwards 4s;
+		width: 0;
+	}
+
 	.news-card {
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 	}

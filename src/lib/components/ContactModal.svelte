@@ -208,12 +208,4 @@
 	.animate-modal-scan {
 		animation: modal-scan 4s linear infinite;
 	}
-	@keyframes shine {
-		100% {
-			transform: translateX(100%);
-		}
-	}
-	.animate-shine {
-		animation: shine 0.6s ease-out;
-	}
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
+	import { untrack } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
 	import { goto } from '$app/navigation';
 	import XIcon from 'lucide-svelte/icons/x';
@@ -24,7 +25,7 @@
 		}
 	});
 
-	let displayArticle = $state(data.article);
+	let displayArticle = $state(untrack(() => data.article));
 	let isTranslating = $state(false);
 
 	$effect(() => {
