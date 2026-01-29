@@ -165,6 +165,7 @@
 
 	// Translation Logic for News List
 	import { translationStore } from '$lib/stores/translation.svelte.js';
+	import { theme } from '$lib/stores/theme.svelte.js';
 
 	/** @type {any[]} */
 	let translatedNews = $state([]);
@@ -248,15 +249,31 @@
 
 <svelte:window onmousemove={handleMouseMove} bind:scrollY />
 
-<!-- Global Ambient Background -->
-<div class="fixed inset-0 -z-50 overflow-hidden pointer-events-none" style="background: #FAFAFA;">
+<!-- Global Ambient Background & Spotlight -->
+<div
+	class="fixed inset-0 z-50 overflow-hidden pointer-events-none"
+	style="mix-blend-mode: color-dodge;"
+>
+	<div
+		class="absolute rounded-full transition-transform duration-75 ease-out will-change-transform"
+		style="
+			width: 600px; 
+			height: 600px; 
+			left: -300px; 
+			top: -300px;
+			transform: translate({mouseX}px, {mouseY}px);
+			background: radial-gradient(circle closest-side, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.2) 60%, transparent 100%);
+			opacity: {theme.isDark && theme.isSpotlightEnabled ? 1 : 0};
+			transition: opacity 0.3s ease;
+		"
+	></div>
+</div>
+<div
+	class="fixed inset-0 -z-50 overflow-hidden pointer-events-none transition-colors duration-500 bg-[#FAFAFA] dark:bg-black"
+>
 	<div
 		class="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-multiply"
 		style="background-image: url(&quot;data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E&quot;);"
-	></div>
-	<div
-		class="absolute h-[800px] w-[800px] rounded-full bg-white blur-[120px] transition-transform duration-100 ease-out will-change-transform mix-blend-normal opacity-80"
-		style="left: -400px; top: -400px; transform: translate({mouseX}px, {mouseY}px);"
 	></div>
 </div>
 
@@ -271,7 +288,7 @@
 					{#each heroTextEN as line, i}
 						<div class="overflow-hidden" style="min-height: clamp(2rem, 6vw, 4.5rem);">
 							<span
-								class="block text-black leading-[1.1] tracking-tighter break-words antialiased"
+								class="block text-black leading-[1.1] tracking-tighter break-words antialiased transition-colors duration-300 dark:text-zinc-800"
 								style="font-family: 'Inter', sans-serif; font-size: clamp(2rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -0.05em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;"
 							>
 								{typedLines[i] || ''}{#if cursorPosition.line === i && cursorPosition.visible}<span
@@ -332,12 +349,12 @@
 			{#key language.current}
 				<div in:fade={{ duration: 300 }}>
 					<h2
-						class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl"
+						class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-colors dark:text-white dark:text-glow"
 						style="color: #1A1A1A;"
 					>
 						{t.projects.title}
 					</h2>
-					<p class="text-lg" style="color: #6B6B6B;">
+					<p class="text-lg transition-colors dark:text-zinc-400" style="color: #6B6B6B;">
 						{t.projects.desc}
 					</p>
 				</div>
@@ -363,7 +380,10 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="empty-state rounded-3xl bg-white p-16 text-center" in:fade={{ duration: 200 }}>
+			<div
+				class="empty-state rounded-3xl bg-white p-16 text-center dark:bg-zinc-900/20"
+				in:fade={{ duration: 200 }}
+			>
 				<p class="text-lg" style="color: #6B6B6B;">
 					{selectedCategory === 'All'
 						? 'プロジェクトはまだありません'
@@ -390,18 +410,26 @@
 
 	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
 		<div class="mb-16">
-			<h2 class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl" style="color: #1A1A1A;">
+			<h2
+				class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-colors dark:text-white dark:text-glow"
+				style="color: #1A1A1A;"
+			>
 				{t.news.title}
 			</h2>
-			<p class="text-lg" style="color: #6b6b6b;">{t.news.desc}</p>
+			<p class="text-lg transition-colors dark:text-zinc-400" style="color: #6b6b6b;">
+				{t.news.desc}
+			</p>
 		</div>
 
 		<div class="grid gap-8 md:grid-cols-2">
 			{#each displayNews as item, i}
 				<button
 					type="button"
-					class="news-card group relative flex w-full flex-col overflow-hidden rounded-3xl text-left transition-all duration-500 hover:-translate-y-2 focus:outline-none focus:ring-4 focus:ring-gray-100"
-					style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(50px); border: 1px solid rgba(243, 244, 246, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);"
+					class="news-card group relative flex w-full flex-col overflow-hidden rounded-3xl text-left transition-all duration-500 hover:-translate-y-2 focus:outline-none focus:ring-4 focus:ring-gray-100 dark:bg-zinc-900/40 dark:border-white/10 dark:backdrop-blur-xl dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.3)]"
+					class:border-glow={theme.isScanLineActive}
+					style="backdrop-filter: blur(50px); border: 1px solid rgba(243, 244, 246, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01); {theme.isDark
+						? ''
+						: 'background: rgba(255, 255, 255, 0.5);'}"
 					onclick={() => navigateToNews(item)}
 					use:reveal={{ threshold: 0.1 }}
 				>
@@ -413,8 +441,10 @@
 								class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
 							/>
 						{:else}
-							<div class="flex h-full w-full items-center justify-center bg-gray-50">
-								<span class="text-4xl opacity-20">📰</span>
+							<div
+								class="flex h-full w-full items-center justify-center bg-gray-50 dark:bg-zinc-900"
+							>
+								<span class="text-4xl opacity-20 dark:opacity-50 dark:text-cyan-400">📰</span>
 							</div>
 						{/if}
 					</div>
@@ -438,11 +468,13 @@
 							{/if}
 						</div>
 						<h3
-							class="mb-3 text-2xl font-semibold leading-tight text-[#1d1d1f] group-hover:text-blue-600 transition-colors"
+							class="mb-3 text-2xl font-semibold leading-tight text-[#1d1d1f] group-hover:text-blue-600 transition-colors dark:text-zinc-100 dark:text-glow dark:group-hover:text-cyan-400"
 						>
 							{item.title}
 						</h3>
-						<div class="mt-auto flex items-center gap-2 text-sm font-medium text-blue-500">
+						<div
+							class="mt-auto flex items-center gap-2 text-sm font-medium text-blue-500 dark:text-cyan-400"
+						>
 							{t.news.readMore}
 							<ArrowRight
 								class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"

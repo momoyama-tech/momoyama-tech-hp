@@ -62,19 +62,20 @@
 			>
 				<!-- Timeline dot -->
 				<div
-					class="absolute left-3.5 top-3.5 h-3 w-3 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 ring-4 ring-white"
+					class="absolute left-3.5 top-3.5 h-3 w-3 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 ring-4 ring-white dark:ring-black"
 				></div>
 
 				<!-- Month header -->
 				<button
-					class="month-header flex w-full items-center justify-between rounded-xl bg-white px-5 py-4 text-left transition-all duration-300 hover:-translate-y-1"
+					class="month-header flex w-full items-center justify-between rounded-xl bg-white px-5 py-4 text-left transition-all duration-300 hover:-translate-y-1 dark:bg-zinc-900/80 dark:border dark:border-white/10"
 					onclick={() => toggleMonth(group.month)}
 				>
-					<span class="font-medium" style="color: #6B6B6B;">
+					<span class="font-medium text-[#6B6B6B] dark:text-zinc-300">
 						{group.label}
 					</span>
-					<span class="flex items-center gap-2 text-sm" style="color: #8B8B8B;">
-						<span class="rounded-full bg-purple-100 px-2 py-0.5 text-xs" style="color: #6B6B6B;"
+					<span class="flex items-center gap-2 text-sm text-[#8B8B8B] dark:text-zinc-500">
+						<span
+							class="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-[#6B6B6B] dark:bg-purple-900/30 dark:text-purple-300"
 							>{group.events.length}</span
 						>
 						<ChevronDown
@@ -89,22 +90,21 @@
 					<div class="mt-3 space-y-2" transition:slide={{ duration: 250, easing: cubicOut }}>
 						{#each group.events as event}
 							<div
-								class="past-event rounded-xl bg-white p-4 transition-opacity"
+								class="past-event rounded-xl bg-white p-4 transition-opacity dark:bg-zinc-900/30 dark:border dark:border-white/5"
 								style="opacity: 0.5;"
 							>
 								<div class="flex items-start gap-3">
 									<span
-										class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-sm font-medium"
-										style="color: #6B6B6B;"
+										class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-sm font-medium text-[#6B6B6B] dark:bg-zinc-800 dark:text-zinc-400"
 									>
 										{formatDay(event.date)}
 									</span>
 									<div>
-										<h4 class="font-medium" style="color: #6B6B6B;">
+										<h4 class="font-medium text-[#6B6B6B] dark:text-zinc-300">
 											{event.title}
 										</h4>
 										{#if event.description}
-											<p class="mt-1 text-sm" style="color: #8B8B8B;">
+											<p class="mt-1 text-sm text-[#8B8B8B] dark:text-zinc-500">
 												{event.description}
 											</p>
 										{/if}
@@ -120,13 +120,15 @@
 
 	{#if monthGroups.length === 0}
 		<div
-			class="rounded-3xl bg-white p-12 text-center"
+			class="rounded-3xl bg-white p-12 text-center dark:bg-zinc-900/20"
 			style="box-shadow: 0 4px 20px rgba(0,0,0,0.06);"
 		>
-			<div class="mx-auto h-16 w-16 rounded-2xl bg-purple-50 flex items-center justify-center mb-4">
-				<Calendar class="h-8 w-8" style="color: #6B6B6B;" />
+			<div
+				class="mx-auto h-16 w-16 rounded-2xl bg-purple-50 flex items-center justify-center mb-4 dark:bg-zinc-800"
+			>
+				<Calendar class="h-8 w-8 text-[#6B6B6B] dark:text-zinc-400" />
 			</div>
-			<p style="color: #6B6B6B;">過去の活動記録はありません</p>
+			<p class="text-[#6B6B6B] dark:text-zinc-500">過去の活動記録はありません</p>
 		</div>
 	{/if}
 </div>

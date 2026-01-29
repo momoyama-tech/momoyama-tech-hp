@@ -68,27 +68,27 @@
 	let t = $derived(translations[/** @type {'JP'|'EN'} */ (language.current)]);
 </script>
 
-<section id="schedule" class="py-32 relative overflow-hidden bg-white">
+<section id="schedule" class="py-32 relative overflow-hidden bg-white dark:bg-black">
 	<div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
 		<!-- Section Header -->
 		<div class="mb-24 text-center relative">
 			<span
-				class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[6rem] sm:text-[9rem] md:text-[12rem] font-bold text-gray-50 -z-10 select-none pointer-events-none leading-none tracking-tighter"
+				class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[6rem] sm:text-[9rem] md:text-[12rem] font-bold text-gray-50 dark:text-zinc-900/50 -z-10 select-none pointer-events-none leading-none tracking-tighter"
 				style="font-family: 'Inter', sans-serif;">SCHEDULE</span
 			>
 			<h2
-				class="mb-6 text-4xl font-extrabold tracking-tight md:text-5xl"
+				class="mb-6 text-4xl font-extrabold tracking-tight md:text-5xl transition-colors dark:text-white dark:text-glow"
 				style="font-family: 'Inter', sans-serif; font-weight: 800; color: #1A1A1A;"
 				in:fly={{ y: 30, duration: 600, easing: cubicOut }}
 			>
 				{#key language.current}
-					<span in:fade={{ duration: 300 }}>
+					<span in:fade={{ duration: 300 }} class="dark:text-white">
 						{t.schedule.title}
 					</span>
 				{/key}
 			</h2>
 			<p
-				class="text-lg font-medium tracking-tight"
+				class="text-lg font-medium tracking-tight transition-colors dark:text-zinc-400"
 				style="font-family: 'Inter', sans-serif; font-weight: 500; color: #86868B; letter-spacing: -0.02em;"
 				in:fly={{ y: 30, delay: 100, duration: 600, easing: cubicOut }}
 			>
@@ -107,7 +107,7 @@
 				{@const daysUntil = getDaysUntil(event.date)}
 				<div class="space-y-6">
 					<h3
-						class="text-sm font-black tracking-widest text-[#86868B] uppercase pl-4"
+						class="text-sm font-black tracking-widest text-[#86868B] uppercase pl-4 dark:text-zinc-500"
 						style="font-family: 'Inter', sans-serif; font-weight: 900; letter-spacing: 0.05em;"
 					>
 						{#key language.current}
@@ -118,7 +118,7 @@
 					</h3>
 
 					<div
-						class="relative overflow-hidden rounded-[16px] border border-gray-100 bg-white p-8 md:p-12 shadow-[0_2px_40px_rgba(0,0,0,0.04)] transition-transform hover:translate-y-[-2px]"
+						class="relative overflow-hidden rounded-[16px] border border-gray-100 bg-white p-8 md:p-12 shadow-[0_2px_40px_rgba(0,0,0,0.04)] transition-transform hover:translate-y-[-2px] dark:bg-zinc-900/40 dark:border-white/10 dark:backdrop-blur-xl"
 						in:fly={{ y: 30, duration: 600, easing: cubicOut }}
 					>
 						<div class="flex flex-col md:flex-row md:items-center md:gap-8">
@@ -126,16 +126,18 @@
 							<div class="flex shrink-0 flex-col items-center justify-center p-2 md:p-4">
 								<!-- Calendar Icon Container -->
 								<div
-									class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-sm border border-gray-100 aspect-square w-32 md:w-36 lg:w-40 p-4 mb-5 relative overflow-hidden"
+									class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-sm border border-gray-100 aspect-square w-32 md:w-36 lg:w-40 p-4 mb-5 relative overflow-hidden dark:bg-black dark:border-white/10"
 									style="box-shadow: 0 4px 20px rgba(0,0,0,0.03);"
 								>
 									<!-- Red Top Bar Accent -->
-									<div class="absolute top-0 left-0 right-0 h-1.5 bg-[#FF3B30]"></div>
+									<div
+										class="absolute top-0 left-0 right-0 h-1.5 bg-[#FF3B30] dark:bg-cyan-500"
+									></div>
 
 									<div class="flex flex-col items-center leading-none mt-2">
 										<!-- Month -->
 										<span
-											class="text-lg font-bold text-[#FF3B30] tracking-widest mb-0.5"
+											class="text-lg font-bold text-[#FF3B30] tracking-widest mb-0.5 dark:text-cyan-400"
 											style="font-family: 'Inter', sans-serif;"
 										>
 											{#if language.current === 'JP'}
@@ -146,7 +148,7 @@
 										</span>
 										<!-- Day -->
 										<span
-											class="text-6xl md:text-7xl font-black text-[#1A1A1A] tracking-tighter"
+											class="text-6xl md:text-7xl font-black text-[#1A1A1A] tracking-tighter dark:text-white"
 											style="font-family: 'Inter', sans-serif; letter-spacing: -0.07em;"
 										>
 											{String(new Date(event.date).getDate()).padStart(2, '0')}
@@ -156,7 +158,7 @@
 
 								{#if daysUntil !== null && daysUntil >= 0}
 									<div
-										class="px-4 py-2 text-xs font-bold tracking-widest uppercase bg-[#F5F5F7] text-[#1A1A1A] rounded-lg"
+										class="px-4 py-2 text-xs font-bold tracking-widest uppercase bg-[#F5F5F7] text-[#1A1A1A] rounded-lg dark:bg-zinc-800 dark:text-white"
 										style="font-family: 'Inter', sans-serif;"
 									>
 										{#key language.current}
@@ -175,13 +177,13 @@
 							<!-- Content -->
 							<div class="mt-8 flex-1 text-center md:mt-0 md:text-left">
 								<h4
-									class="mb-6 text-3xl md:text-5xl font-black text-[#1A1A1A] leading-tight tracking-tighter"
+									class="mb-6 text-3xl md:text-5xl font-black text-[#1A1A1A] leading-tight tracking-tighter dark:text-white dark:text-glow"
 									style="font-family: 'Inter', sans-serif; letter-spacing: -0.05em; line-height: 1.1;"
 								>
 									{event.title}
 								</h4>
 								<div
-									class="flex flex-col gap-4 md:flex-row md:items-center md:flex-wrap text-[#86868B] text-sm"
+									class="flex flex-col gap-4 md:flex-row md:items-center md:flex-wrap text-[#86868B] text-sm dark:text-zinc-400"
 								>
 									{#if event.location}
 										<div class="flex items-center justify-center md:justify-start gap-2">
@@ -190,9 +192,9 @@
 										</div>
 									{/if}
 									{#if event.description}
-										<div class="hidden md:block h-px w-8 bg-gray-200"></div>
+										<div class="hidden md:block h-px w-8 bg-gray-200 dark:bg-zinc-700"></div>
 										<span
-											class="px-3 py-1 bg-gray-50 rounded text-[#1A1A1A] text-xs font-medium border border-gray-100"
+											class="px-3 py-1 bg-gray-50 rounded text-[#1A1A1A] text-xs font-medium border border-gray-100 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700"
 										>
 											{event.description}
 										</span>
@@ -203,8 +205,8 @@
 					</div>
 				</div>
 			{:else}
-				<div class="text-center py-20 border-y border-gray-50">
-					<p class="text-[#86868B]">{t.schedule.empty}</p>
+				<div class="text-center py-20 border-y border-gray-50 dark:border-zinc-900">
+					<p class="text-[#86868B] dark:text-zinc-500">{t.schedule.empty}</p>
 				</div>
 			{/if}
 
@@ -212,7 +214,7 @@
 			{#if scheduleData.upcomingEvents.length > 0}
 				<div class="space-y-8 opacity-100">
 					<h3
-						class="text-sm font-black tracking-widest text-[#1A1A1A] uppercase pl-4 border-l-[3px] border-[#1A1A1A]"
+						class="text-sm font-black tracking-widest text-[#1A1A1A] uppercase pl-4 border-l-[3px] border-[#1A1A1A] dark:text-white dark:border-white"
 						style="font-family: 'Inter', sans-serif; font-weight: 900;"
 					>
 						{#key language.current}
@@ -222,17 +224,20 @@
 						{/key}
 					</h3>
 
-					<div class="space-y-4 border-t border-gray-100 pt-8">
+					<div class="space-y-4 border-t border-gray-100 pt-8 dark:border-zinc-800">
 						{#each scheduleData.upcomingEvents as event, i}
 							<div
-								class="group flex flex-col sm:flex-row items-baseline gap-6 py-6 px-6 bg-gray-50/50 hover:bg-gray-100/80 transition-all duration-300 rounded-[16px]"
+								class="group flex flex-col sm:flex-row items-baseline gap-6 py-6 px-6 bg-gray-50/50 hover:bg-gray-100/80 transition-all duration-300 rounded-[16px] dark:bg-zinc-900/30 dark:hover:bg-zinc-800/50"
 								in:fly={{ y: 20, delay: i * 50 + 200, duration: 500, easing: cubicOut }}
 							>
 								<!-- Status Dot & Date -->
 								<div class="flex items-baseline gap-4 w-48 shrink-0">
-									<span class="text-[#1A1A1A] text-[8px] relative -top-0.5 scale-125">●</span>
 									<span
-										class="text-xl font-bold text-[#1A1A1A] tracking-tighter"
+										class="text-[#1A1A1A] text-[8px] relative -top-0.5 scale-125 dark:text-cyan-500"
+										>●</span
+									>
+									<span
+										class="text-xl font-bold text-[#1A1A1A] tracking-tighter dark:text-zinc-100"
 										style="font-family: 'Inter', sans-serif; letter-spacing: -0.02em;"
 									>
 										>
@@ -247,14 +252,14 @@
 								<!-- Title -->
 								<div class="flex-1">
 									<h4
-										class="text-2xl font-black text-[#1A1A1A] mb-2 group-hover:opacity-70 transition-opacity tracking-tight"
+										class="text-2xl font-black text-[#1A1A1A] mb-2 group-hover:opacity-70 transition-opacity tracking-tight dark:text-white"
 										style="font-family: 'Inter', sans-serif; letter-spacing: -0.03em;"
 									>
 										{event.title}
 									</h4>
 									{#if event.description || event.location}
 										<div
-											class="flex gap-4 text-xs font-medium text-[#86868B] uppercase tracking-wide"
+											class="flex gap-4 text-xs font-medium text-[#86868B] uppercase tracking-wide dark:text-zinc-500"
 										>
 											{#if event.description}<span>{event.description}</span>{/if}
 											{#if event.location}<span>@ {event.location}</span>{/if}
@@ -269,12 +274,12 @@
 
 			<!-- 3. History Section (Opacity 0.4) -->
 			<div
-				class="pt-16 border-t border-gray-100 opacity-40 hover:opacity-100 transition-opacity duration-500"
+				class="pt-16 border-t border-gray-100 opacity-40 hover:opacity-100 transition-opacity duration-500 dark:border-zinc-800"
 			>
 				<div class="text-center mb-12">
 					<button
 						onclick={() => (showHistory = !showHistory)}
-						class="inline-flex items-center gap-3 px-8 py-3 rounded-full border border-gray-200 text-[#1A1A1A] font-bold text-sm hover:bg-gray-50 transition-colors bg-white tracking-wide"
+						class="inline-flex items-center gap-3 px-8 py-3 rounded-full border border-gray-200 text-[#1A1A1A] font-bold text-sm hover:bg-gray-50 transition-colors bg-white tracking-wide dark:bg-zinc-900 dark:text-white dark:border-zinc-700 dark:hover:bg-zinc-800"
 						style="font-family: 'Inter', sans-serif;"
 					>
 						{#key language.current}
