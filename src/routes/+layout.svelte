@@ -261,9 +261,22 @@
 	<!-- Mobile menu -->
 	{#if isMenuOpen}
 		<div
-			class="fixed inset-0 top-16 z-[10000] bg-white/95 backdrop-blur-md md:hidden dark:bg-black/95 flex flex-col"
+			class="fixed inset-0 top-0 z-[10002] bg-white/95 backdrop-blur-md md:hidden dark:bg-black/95 flex flex-col"
 			transition:fade={{ duration: 200 }}
 		>
+			<!-- Mobile Menu Header (Close Button) -->
+			<div
+				class="flex h-16 items-center justify-end px-4 border-b border-gray-100 dark:border-gray-800"
+			>
+				<button
+					class="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-black dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white"
+					onclick={() => (isMenuOpen = false)}
+					aria-label="メニューを閉じる"
+				>
+					<X class="h-6 w-6" />
+				</button>
+			</div>
+
 			<div class="flex-1 space-y-2 px-6 py-8 overflow-y-auto">
 				{#each navItems as item, i}
 					<a
