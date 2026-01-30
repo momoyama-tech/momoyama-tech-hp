@@ -159,34 +159,17 @@
 	let mouseY = $state(0);
 	let innerWidth = $state(0);
 	let innerHeight = $state(0);
-	let isMobile = $derived(innerWidth <= 768);
+	let isMobile = $derived(innerWidth <= 1024);
 
 	// Mobile Auto-Scan Animation (CSS based now)
 	let spotlightEl = $state();
-	$effect(() => {
-		/** @type {number} */
-		let frame;
-		function syncLoop() {
-			if (isMobile && theme.isSpotlightEnabled && spotlightEl) {
-				const rect = spotlightEl.getBoundingClientRect();
-				const centerX = rect.left + rect.width / 2;
-				const centerY = rect.top + rect.height / 2;
-				// Update global mouse coordinates to match the visual spotlight
-				mouseX = centerX;
-				mouseY = centerY;
-			}
-			frame = requestAnimationFrame(syncLoop);
-		}
-		frame = requestAnimationFrame(syncLoop);
-		return () => cancelAnimationFrame(frame);
-	});
+	/* Eliminated JS Sync Loop for Mobile/iPad to use pure CSS */
 
 	/** @param {MouseEvent} e */
 	function handleMouseMove(e) {
-		if (!isMobile) {
-			mouseX = e.clientX;
-			mouseY = e.clientY;
-		}
+		if (isMobile) return;
+		mouseX = e.clientX;
+		mouseY = e.clientY;
 	}
 
 	let scrollY = $state(0);
@@ -276,6 +259,10 @@
 	let heroMaskPos = $state({ x: -1000, y: -1000 });
 
 	$effect(() => {
+		// Dependency on scrollY is required to update rect calculation on scroll
+		const _s = scrollY;
+		if (isMobile) return;
+
 		if (heroContainer) {
 			const rect = heroContainer.getBoundingClientRect();
 			heroMaskPos = {
@@ -331,13 +318,12 @@
 		bind:this={spotlightEl}
 		class="spotlight-base absolute rounded-full transition-transform duration-75 ease-out will-change-transform flex items-center justify-center placeholder:overflow-hidden"
 		style="
-			transform: translate(-50%, -50%) translate({isMobile ? 0 : mouseX - innerWidth / 2}px, {isMobile
-			? 0
-			: mouseY - innerHeight / 2}px);
+			/* Force NO transform/style on mobile from JS to avoid conflict */
+			transform: {isMobile ? '' : `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`};
 			background: transparent;
 			backdrop-filter: brightness(1.5) contrast(1.5);
 			opacity: {theme.isDark && theme.isSpotlightEnabled ? 1 : 0};
-			transition: opacity 0.3s ease;
+			transition: opacity 0.3s ease, transform 0.2s ease-out;
 		"
 	>
 		<!-- Grid Overlay inside Spotlight -->
@@ -372,46 +358,60 @@
 	>
 		<div class="w-full max-w-[1200px] mx-auto">
 			<div class="flex flex-col md:flex-row items-end w-full gap-12 md:gap-0">
+				<!-- Hero Text Container (Base + Lit layers) -->
 				<div
-					bind:this={heroContainer}
-					class="w-full md:w-[70%] flex flex-col gap-1 md:gap-1"
-					style="
-						min-height: 25rem;
-						-webkit-mask-image: {theme.isDark
-						? theme.isSpotlightEnabled
-							? `radial-gradient(circle 300px at ${heroMaskPos.x}px ${heroMaskPos.y}px, black 0%, black 20%, rgba(0,0,0,0.01) 70%)`
-							: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0))'
-						: 'none'};
-						mask-image: {theme.isDark
-						? theme.isSpotlightEnabled
-							? `radial-gradient(circle 300px at ${heroMaskPos.x}px ${heroMaskPos.y}px, black 0%, black 20%, rgba(0,0,0,0.01) 70%)`
-							: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0))'
-						: 'none'};
-					"
+					class="relative w-full md:w-[70%] flex flex-col gap-1 md:gap-1"
+					style="min-height: 25rem;"
 				>
-					{#each heroTextEN as line, i}
-						<div class="overflow-hidden" style="min-height: clamp(2rem, 6vw, 4.5rem);">
-							<span
-								class="block text-black leading-[1.1] tracking-tighter break-words antialiased transition-colors duration-300 dark:text-white dark:opacity-100"
-								style="
-									font-family: 'Inter', sans-serif; 
-									font-size: clamp(2rem, 6vw, 4.5rem); 
-									font-weight: 800; 
-									letter-spacing: -0.05em; 
-									-webkit-font-smoothing: antialiased; 
-									-moz-osx-font-smoothing: grayscale; 
-									text-shadow: {theme.isDark ? '0 0 10px rgba(255, 255, 255, 0.8)' : 'none'};
-								"
-							>
-								{typedLines[i] || ''}{#if cursorPosition.line === i && cursorPosition.visible}<span
-										style="color: #000000; font-weight: 800; margin-left: 4px; display: inline-block; width: 4px;"
-										>|</span
-									>{/if}
-							</span>
-						</div>
-					{/each}
-				</div>
+					<!-- Layer 1: Text (Visual Foundation) -->
+					<!-- Standard text styling, no tricks. In Dark Mode, this will be dimmed by the overlay. -->
+					<div
+						class="flex flex-col gap-1 md:gap-1"
+						style="
+							opacity: {theme.isDark && !theme.isSpotlightEnabled ? 0 : 1};
+							transition: opacity 0.5s ease;
+						"
+					>
+						{#each heroTextEN as line, i}
+							<div class="overflow-hidden" style="min-height: clamp(2rem, 6vw, 4.5rem);">
+								<span
+									class="block text-black leading-[1.1] tracking-tighter break-words antialiased transition-colors duration-300 dark:text-white"
+									style="
+										font-family: 'Inter', sans-serif; 
+										font-size: clamp(2rem, 6vw, 4.5rem); 
+										font-weight: 800; 
+										letter-spacing: -0.05em; 
+										-webkit-font-smoothing: antialiased; 
+										-moz-osx-font-smoothing: grayscale;
+									"
+								>
+									{typedLines[i] ||
+										''}{#if cursorPosition.line === i && cursorPosition.visible}<span
+											style="color: {theme.isDark
+												? '#FFF'
+												: '#000'}; font-weight: 800; margin-left: 4px; display: inline-block; width: 4px;"
+											>|</span
+										>{/if}
+								</span>
+							</div>
+						{/each}
+					</div>
 
+					<!-- Layer 2: Darkness Overlay + Spotlight Hole -->
+					<div
+						bind:this={heroContainer}
+						class="hero-mask-overlay absolute inset-0 z-20 pointer-events-none"
+						style="
+							background-color: #000000;
+							opacity: {theme.isDark && theme.isSpotlightEnabled ? 1 : 0};
+							transition: opacity 0.5s ease;
+							mask-image: radial-gradient(circle 200px at var(--mask-x, var(--x)) var(--mask-y, var(--y)), rgba(0,0,0,0.1) 20%, black 80%);
+							-webkit-mask-image: radial-gradient(circle 200px at var(--mask-x, var(--x)) var(--mask-y, var(--y)), rgba(0,0,0,0.1) 20%, black 80%);
+							--x: {heroMaskPos.x}px;
+							--y: {heroMaskPos.y}px;
+						"
+					></div>
+				</div>
 				<div class="w-full md:w-[30%] flex flex-col gap-4 md:gap-5 text-right pb-1 md:pb-2">
 					<div class="flex flex-col gap-2">
 						{#each heroTextJP as line, i}
@@ -686,48 +686,99 @@
 		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
 	}
 
-	@keyframes mobileScan {
-		0% {
-			transform: translate(-50%, -50%) translate(-30vw, -20vh);
-		}
-		25% {
-			transform: translate(-50%, -50%) translate(20vw, -10vh);
-		}
-		50% {
-			transform: translate(-50%, -50%) translate(-10vw, 15vh);
-		}
-		75% {
-			transform: translate(-50%, -50%) translate(25vw, 25vh);
-		}
-		100% {
-			transform: translate(-50%, -50%) translate(-25vw, 0vh);
-		}
-	}
-
 	/* Base Spotlight Styles */
 	.spotlight-base {
 		width: 600px;
 		height: 600px;
-		left: 50%;
-		top: 50%;
+		left: 0;
+		top: 0;
+		display: flex;
+		opacity: 0;
+		transition:
+			opacity 0.3s ease,
+			transform 0.2s ease-out;
+	}
+	:global(.dark) .spotlight-base {
+		opacity: 1;
 	}
 
-	/* Mobile Animation - Pure CSS (No JS dependency) */
-	@media (max-width: 768px) {
+	@property --gx {
+		syntax: '<length-percentage>';
+		inherits: false;
+		initial-value: 50%;
+	}
+	@property --gy {
+		syntax: '<length-percentage>';
+		inherits: false;
+		initial-value: 50%;
+	}
+
+	/* Synchronized Roaming for Mobile/iPad */
+	@keyframes roam-cycle {
+		0% {
+			--gx: 50vw;
+			--gy: 50vh;
+		}
+		20% {
+			--gx: 20vw;
+			--gy: 30vh;
+		} /* Top Left */
+		40% {
+			--gx: 80vw;
+			--gy: 20vh;
+		} /* Top Right */
+		60% {
+			--gx: 70vw;
+			--gy: 80vh;
+		} /* Bottom Right */
+		80% {
+			--gx: 30vw;
+			--gy: 70vh;
+		} /* Bottom Left */
+		100% {
+			--gx: 50vw;
+			--gy: 50vh;
+		}
+	}
+
+	/* Mobile/iPad (<= 1024px) */
+	@media (max-width: 1024px) {
 		.spotlight-base {
-			animation: mobileScan 20s cubic-bezier(0.68, -0.6, 0.32, 1.6) infinite alternate !important;
-			/* Enforce position and layout */
-			display: flex !important;
-			top: 50% !important;
-			left: 50% !important;
-			transform-origin: center center !important;
-			/* Default to hidden primarily, override only in dark mode */
-			opacity: 0 !important;
+			position: fixed !important;
+			left: 0 !important;
+			top: 0 !important;
+			/* Use shared variables for position */
+			transform: translate(var(--gx), var(--gy)) translate(-50%, -50%) !important;
+			animation: roam-cycle 15s infinite ease-in-out !important;
+			will-change: transform;
+			pointer-events: none;
+			width: 400px !important;
+			height: 400px !important;
 		}
 
-		/* Only visible in dark mode */
-		:global(.dark) .spotlight-base {
-			opacity: 1 !important;
+		.hero-mask-overlay {
+			/* Force Fixed to match viewport coordinates exactly */
+			position: fixed !important;
+			inset: 0 !important;
+			width: 100vw !important;
+			height: 100vh !important;
+			z-index: 20 !important;
+
+			/* Animate variables same as spotlight */
+			animation: roam-cycle 15s infinite ease-in-out !important;
+
+			/* Use variables for mask position */
+			--mask-pos: var(--gx) var(--gy);
+			mask-image: radial-gradient(
+				circle 200px at var(--mask-pos),
+				rgba(0, 0, 0, 0.1) 20%,
+				black 80%
+			) !important;
+			-webkit-mask-image: radial-gradient(
+				circle 200px at var(--mask-pos),
+				rgba(0, 0, 0, 0.1) 20%,
+				black 80%
+			) !important;
 		}
 	}
 </style>
