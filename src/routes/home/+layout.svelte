@@ -136,7 +136,9 @@
 			: displayProjects.filter((p) => p.category === selectedCategory)
 	);
 
-	const categories = $derived([...new Set(data.projects.map((p) => p.category).filter(Boolean))]);
+	const categories = $derived([
+		...new Set(data.projects.map((/** @type {any} */ p) => p.category).filter(Boolean))
+	]);
 
 	/** @param {string} category */
 	function handleCategorySelect(category) {
@@ -202,7 +204,7 @@
 			if (language.current === 'EN') {
 				// News Translation
 				const newsPromise = Promise.all(
-					data.news.map(async (item) => {
+					data.news.map(async (/** @type {any} */ item) => {
 						const translatedTitle = await translationStore.get(item.title);
 						return { ...item, title: translatedTitle };
 					})
@@ -210,7 +212,7 @@
 
 				// Projects Translation
 				const projectsPromise = Promise.all(
-					data.projects.map(async (item) => {
+					data.projects.map(async (/** @type {any} */ item) => {
 						const [tTitle, tDesc] = await Promise.all([
 							translationStore.get(item.title),
 							translationStore.get(item.description)
@@ -327,13 +329,8 @@
 >
 	<div
 		bind:this={spotlightEl}
-		class="absolute rounded-full transition-transform duration-75 ease-out will-change-transform flex items-center justify-center placeholder:overflow-hidden"
-		class:mobile-spotlight-anim={isMobile}
+		class="spotlight-base absolute rounded-full transition-transform duration-75 ease-out will-change-transform flex items-center justify-center placeholder:overflow-hidden"
 		style="
-			width: 600px; 
-			height: 600px; 
-			left: 50%; 
-			top: 50%;
 			transform: translate(-50%, -50%) translate({isMobile ? 0 : mouseX - innerWidth / 2}px, {isMobile
 			? 0
 			: mouseY - innerHeight / 2}px);
@@ -707,13 +704,30 @@
 		}
 	}
 
-	:global(.mobile-spotlight-anim) {
-		animation: mobileScan 20s cubic-bezier(0.68, -0.6, 0.32, 1.6) infinite alternate !important;
-		/* Ensure visibility is forced */
-		opacity: 1 !important;
-		display: flex !important;
-		top: 50% !important;
-		left: 50% !important;
-		/* Check visibility wrapper */
+	/* Base Spotlight Styles */
+	.spotlight-base {
+		width: 600px;
+		height: 600px;
+		left: 50%;
+		top: 50%;
+	}
+
+	/* Mobile Animation - Pure CSS (No JS dependency) */
+	@media (max-width: 768px) {
+		.spotlight-base {
+			animation: mobileScan 20s cubic-bezier(0.68, -0.6, 0.32, 1.6) infinite alternate !important;
+			/* Enforce position and layout */
+			display: flex !important;
+			top: 50% !important;
+			left: 50% !important;
+			transform-origin: center center !important;
+			/* Default to hidden primarily, override only in dark mode */
+			opacity: 0 !important;
+		}
+
+		/* Only visible in dark mode */
+		:global(.dark) .spotlight-base {
+			opacity: 1 !important;
+		}
 	}
 </style>
