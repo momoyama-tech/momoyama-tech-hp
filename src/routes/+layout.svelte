@@ -124,6 +124,25 @@
 </script>
 
 <svelte:head>
+	<title>桃山学院大学テック部 | Momoyama Tech Club</title>
+	<meta
+		name="description"
+		content="桃山学院大学のテック部公式HP。React、Next.js、AI活用など、最新技術を学ぶ学生エンジニア団体です。"
+	/>
+
+	<!-- OGP -->
+	<meta property="og:title" content="桃山学院大学テック部 | Momoyama Tech Club" />
+	<meta
+		property="og:description"
+		content="桃山学院大学のテック部公式HP。React、Next.js、AI活用など、最新技術を学ぶ学生エンジニア団体です。"
+	/>
+	<meta property="og:type" content="website" />
+	<meta property="og:image" content="/ogp.png" />
+
+	<!-- Twitter Card -->
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:image" content="/ogp.png" />
+
 	<link rel="icon" href={favicon} />
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
