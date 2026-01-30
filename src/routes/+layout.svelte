@@ -261,8 +261,8 @@
 	<!-- Mobile menu -->
 	{#if isMenuOpen}
 		<div
-			class="fixed inset-0 top-0 z-[10002] bg-white/95 backdrop-blur-md md:hidden dark:bg-black/95 flex flex-col"
-			transition:fade={{ duration: 200 }}
+			class="fixed inset-0 z-[10002] h-[100dvh] bg-white/95 backdrop-blur-md md:hidden dark:bg-black/95 flex flex-col overflow-y-auto"
+			transition:fly={{ x: 500, opacity: 1, duration: 300 }}
 		>
 			<!-- Mobile Menu Header (Close Button) -->
 			<div
@@ -322,11 +322,73 @@
 							</div>
 						</div>
 
-						<div class="flex flex-col gap-1 items-end">
-							<span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Settings</span
+						<div
+							class="flex flex-col gap-4 items-end mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 w-full"
+						>
+							<span class="text-xs font-bold text-gray-400 uppercase tracking-widest self-start"
+								>Settings</span
 							>
-							<div class="flex items-center gap-3">
-								<ThemeSwitcher />
+
+							<!-- Theme Switcher -->
+							<div class="flex items-center justify-between w-full">
+								<span class="text-gray-900 dark:text-white font-medium">Appearance</span>
+								<div class="flex items-center gap-2">
+									<span class="text-xs text-gray-500">{theme.isDark ? 'Dark' : 'Light'}</span>
+									<ThemeSwitcher />
+								</div>
+							</div>
+
+							<!-- Spotlight Toggle -->
+							<div class="flex items-center justify-between w-full">
+								<span class="text-gray-900 dark:text-white font-medium">Spotlight</span>
+								<button
+									class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 transition-colors"
+									onclick={theme.toggleSpotlight}
+								>
+									<span class="text-xs text-gray-500"
+										>{theme.isSpotlightEnabled ? 'ON' : 'OFF'}</span
+									>
+									{#if theme.isSpotlightEnabled}
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="16"
+											height="16"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											class="text-yellow-500"
+											><path
+												d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"
+											/><path d="M9 18h6" /><path d="M10 22h4" /></svg
+										>
+									{:else}
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="16"
+											height="16"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											class="text-gray-400"
+											><path d="M16.8 11.2c.8-.9 1.2-2 1.2-3.2a6 6 0 0 0-9.3-5" /><path
+												d="M2 2l20 20"
+											/><path d="M6.3 6.3a4.67 4.67 0 0 0-1.2 5.2c.7.7 1.3 1.5 1.5 2.5" /><path
+												d="M9 18h6"
+											/><path d="M10 22h4" /></svg
+										>
+									{/if}
+								</button>
+							</div>
+
+							<!-- Language Switcher -->
+							<div class="flex items-center justify-between w-full">
+								<span class="text-gray-900 dark:text-white font-medium">Language</span>
 								<LanguageSwitcher />
 							</div>
 						</div>

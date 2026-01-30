@@ -155,10 +155,36 @@
 
 	let mouseX = $state(0);
 	let mouseY = $state(0);
+	let innerWidth = $state(0);
+	let innerHeight = $state(0);
+	let isMobile = $derived(innerWidth <= 768);
+
+	// Mobile Auto-Scan Animation (CSS based now)
+	let spotlightEl = $state();
+	$effect(() => {
+		/** @type {number} */
+		let frame;
+		function syncLoop() {
+			if (isMobile && theme.isSpotlightEnabled && spotlightEl) {
+				const rect = spotlightEl.getBoundingClientRect();
+				const centerX = rect.left + rect.width / 2;
+				const centerY = rect.top + rect.height / 2;
+				// Update global mouse coordinates to match the visual spotlight
+				mouseX = centerX;
+				mouseY = centerY;
+			}
+			frame = requestAnimationFrame(syncLoop);
+		}
+		frame = requestAnimationFrame(syncLoop);
+		return () => cancelAnimationFrame(frame);
+	});
+
 	/** @param {MouseEvent} e */
 	function handleMouseMove(e) {
-		mouseX = e.clientX;
-		mouseY = e.clientY;
+		if (!isMobile) {
+			mouseX = e.clientX;
+			mouseY = e.clientY;
+		}
 	}
 
 	let scrollY = $state(0);
@@ -291,7 +317,7 @@
 	);
 </script>
 
-<svelte:window onmousemove={handleMouseMove} bind:scrollY />
+<svelte:window onmousemove={handleMouseMove} bind:scrollY bind:innerWidth bind:innerHeight />
 
 <!-- Global Ambient Background & Spotlight -->
 <!-- Global Ambient Background & Spotlight -->
@@ -300,13 +326,17 @@
 	style="mix-blend-mode: normal;"
 >
 	<div
+		bind:this={spotlightEl}
 		class="absolute rounded-full transition-transform duration-75 ease-out will-change-transform flex items-center justify-center placeholder:overflow-hidden"
+		class:mobile-spotlight-anim={isMobile}
 		style="
 			width: 600px; 
 			height: 600px; 
-			left: -300px; 
-			top: -300px;
-			transform: translate({mouseX}px, {mouseY}px);
+			left: 50%; 
+			top: 50%;
+			transform: translate(-50%, -50%) translate({isMobile ? 0 : mouseX - innerWidth / 2}px, {isMobile
+			? 0
+			: mouseY - innerHeight / 2}px);
 			background: transparent;
 			backdrop-filter: brightness(1.5) contrast(1.5);
 			opacity: {theme.isDark && theme.isSpotlightEnabled ? 1 : 0};
@@ -319,8 +349,12 @@
 			style="
 				background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
 				background-size: 20px 20px;
-				mask-image: radial-gradient(circle closest-side, black, transparent 80%);
-				-webkit-mask-image: radial-gradient(circle closest-side, black, transparent 80%);
+				mask-image: {isMobile
+				? 'radial-gradient(circle closest-side, black, transparent 60%)'
+				: 'radial-gradient(circle closest-side, black, transparent 80%)'};
+				-webkit-mask-image: {isMobile
+				? 'radial-gradient(circle closest-side, black, transparent 60%)'
+				: 'radial-gradient(circle closest-side, black, transparent 80%)'};
 			"
 		></div>
 	</div>
@@ -653,5 +687,33 @@
 	}
 	.news-card:hover {
 		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+	}
+
+	@keyframes mobileScan {
+		0% {
+			transform: translate(-50%, -50%) translate(-30vw, -20vh);
+		}
+		25% {
+			transform: translate(-50%, -50%) translate(20vw, -10vh);
+		}
+		50% {
+			transform: translate(-50%, -50%) translate(-10vw, 15vh);
+		}
+		75% {
+			transform: translate(-50%, -50%) translate(25vw, 25vh);
+		}
+		100% {
+			transform: translate(-50%, -50%) translate(-25vw, 0vh);
+		}
+	}
+
+	:global(.mobile-spotlight-anim) {
+		animation: mobileScan 20s cubic-bezier(0.68, -0.6, 0.32, 1.6) infinite alternate !important;
+		/* Ensure visibility is forced */
+		opacity: 1 !important;
+		display: flex !important;
+		top: 50% !important;
+		left: 50% !important;
+		/* Check visibility wrapper */
 	}
 </style>
