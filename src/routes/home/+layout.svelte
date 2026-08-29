@@ -11,12 +11,71 @@
 	import ArrowUpRight from 'lucide-svelte/icons/arrow-up-right';
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import XIcon from 'lucide-svelte/icons/x';
+	import Code2 from 'lucide-svelte/icons/code-2';
+	import Clapperboard from 'lucide-svelte/icons/clapperboard';
+	import FolderGit2 from 'lucide-svelte/icons/folder-git-2';
+	import MailIcon from 'lucide-svelte/icons/mail';
+	import { spotlight } from '$lib/actions/spotlight.js';
+
+	const portalCards = [
+		{
+			href: '/services',
+			no: '01',
+			title: 'Services',
+			desc: 'Web制作・映像演出・IT教育・プロジェクト共創',
+			icon: Code2,
+			accent: 'cyan'
+		},
+		{
+			href: '/works',
+			no: '02',
+			title: 'Works',
+			desc: '式典動画・プロジェクションマッピング実績',
+			icon: Clapperboard,
+			accent: 'purple'
+		},
+		{
+			href: '/projects',
+			no: '03',
+			title: 'Projects',
+			desc: '部員が制作したプロダクト・作品一覧',
+			icon: FolderGit2,
+			accent: 'emerald'
+		},
+		{
+			href: '/contact',
+			no: '04',
+			title: 'Contact',
+			desc: 'ご相談・お見積り・お問い合わせ',
+			icon: MailIcon,
+			accent: 'amber'
+		}
+	];
+
+	/** @type {Record<string, string>} */
+	const accentIcon = {
+		cyan: 'text-cyan-600 dark:text-cyan-400',
+		purple: 'text-purple-600 dark:text-purple-400',
+		emerald: 'text-emerald-600 dark:text-emerald-400',
+		amber: 'text-amber-600 dark:text-amber-400'
+	};
+	/** @type {Record<string, string>} */
+	const accentGlow = {
+		cyan: 'group-hover:shadow-[0_0_40px_-8px_rgba(34,211,238,0.35)] group-hover:border-cyan-400/50',
+		purple: 'group-hover:shadow-[0_0_40px_-8px_rgba(168,85,247,0.35)] group-hover:border-purple-400/50',
+		emerald:
+			'group-hover:shadow-[0_0_40px_-8px_rgba(16,185,129,0.35)] group-hover:border-emerald-400/50',
+		amber: 'group-hover:shadow-[0_0_40px_-8px_rgba(245,158,11,0.35)] group-hover:border-amber-400/50'
+	};
 
 	import ActivitySection from '$lib/components/ActivitySection.svelte';
 	import ScheduleSection from '$lib/components/ScheduleSection.svelte';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import SecretPalette from '$lib/components/SecretPalette.svelte';
+	import ServicesSection from '$lib/components/ServicesSection.svelte';
+	import WorksSection from '$lib/components/WorksSection.svelte';
+	import ContactSection from '$lib/components/ContactSection.svelte';
 	import { reveal } from '$lib/actions/reveal.js';
 
 	let { data, children } = $props();
@@ -258,6 +317,11 @@
 	let heroContainer = $state();
 	let heroMaskPos = $state({ x: -1000, y: -1000 });
 
+	// The spotlight ("light" mode) is a hero-only effect. Track whether the
+	// hero section is still on screen so it never bleeds onto other sections.
+	let heroSection = $state();
+	let heroInView = $state(true);
+
 	$effect(() => {
 		// Dependency on scrollY is required to update rect calculation on scroll
 		const _s = scrollY;
@@ -272,6 +336,14 @@
 		}
 	});
 
+	$effect(() => {
+		const _s = scrollY;
+		const _h = innerHeight;
+		if (heroSection) {
+			heroInView = heroSection.getBoundingClientRect().bottom > 120;
+		}
+	});
+
 	// Reactive Light Detection for Headings
 	let projectsTitle = $state();
 	let newsTitle = $state();
@@ -279,26 +351,10 @@
 	let isNewsLit = $state(false);
 
 	$effect(() => {
-		if (theme.isSpotlightEnabled) {
-			// removed isDark check to ensure logic runs even if user toggles, though mostly for dark mode
-			if (projectsTitle) {
-				const rect = projectsTitle.getBoundingClientRect();
-				const centerX = rect.left + rect.width / 2;
-				const centerY = rect.top + rect.height / 2;
-				const dist = Math.hypot(mouseX - centerX, mouseY - centerY);
-				isProjectsLit = dist < 300;
-			}
-			if (newsTitle) {
-				const rect = newsTitle.getBoundingClientRect();
-				const centerX = rect.left + rect.width / 2;
-				const centerY = rect.top + rect.height / 2;
-				const dist = Math.hypot(mouseX - centerX, mouseY - centerY);
-				isNewsLit = dist < 300;
-			}
-		} else {
-			isProjectsLit = false;
-			isNewsLit = false;
-		}
+		// The spotlight "light" effect is intentionally limited to the hero,
+		// so the section headings no longer react to it.
+		isProjectsLit = false;
+		isNewsLit = false;
 	});
 
 	let displayNews = $derived(
@@ -311,7 +367,7 @@
 <!-- Global Ambient Background & Spotlight -->
 <!-- Global Ambient Background & Spotlight -->
 <div
-	class="fixed inset-0 z-[9999] overflow-hidden pointer-events-none"
+	class="fixed inset-0 z-9999 overflow-hidden pointer-events-none"
 	style="mix-blend-mode: normal;"
 >
 	<div
@@ -322,7 +378,7 @@
 			transform: {isMobile ? '' : `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`};
 			background: transparent;
 			backdrop-filter: brightness(1.5) contrast(1.5);
-			opacity: {theme.isDark && theme.isSpotlightEnabled ? 1 : 0};
+			opacity: {theme.isDark && theme.isSpotlightEnabled && heroInView ? 1 : 0};
 			transition: opacity 0.3s ease, transform 0.2s ease-out;
 		"
 	>
@@ -352,7 +408,7 @@
 </div>
 
 <!-- Main Content (Background for Modal) -->
-<section class="hero-section relative min-h-screen w-full overflow-hidden">
+<section bind:this={heroSection} class="hero-section relative min-h-screen w-full overflow-hidden">
 	<div
 		class="relative z-10 w-full h-full mx-auto min-h-screen flex flex-col justify-center py-32 px-6 md:px-12 lg:px-20"
 	>
@@ -364,18 +420,14 @@
 					style="min-height: 25rem;"
 				>
 					<!-- Layer 1: Text (Visual Foundation) -->
-					<!-- Standard text styling, no tricks. In Dark Mode, this will be dimmed by the overlay. -->
+					<!-- Standard text styling. In normal state (Spotlight OFF), clearly visible with full opacity. -->
 					<div
 						class="flex flex-col gap-1 md:gap-1"
-						style="
-							opacity: {theme.isDark && !theme.isSpotlightEnabled ? 0 : 1};
-							transition: opacity 0.5s ease;
-						"
 					>
 						{#each heroTextEN as line, i}
 							<div class="overflow-hidden" style="min-height: clamp(2rem, 6vw, 4.5rem);">
 								<span
-									class="block text-black leading-[1.1] tracking-tighter break-words antialiased transition-colors duration-300 dark:text-white"
+									class="block text-black leading-[1.1] tracking-tighter wrap-break-word antialiased transition-colors duration-300 dark:text-white"
 									style="
 										font-family: 'Inter', sans-serif; 
 										font-size: clamp(2rem, 6vw, 4.5rem); 
@@ -397,20 +449,20 @@
 						{/each}
 					</div>
 
-					<!-- Layer 2: Darkness Overlay + Spotlight Hole -->
-					<div
-						bind:this={heroContainer}
-						class="hero-mask-overlay absolute inset-0 z-20 pointer-events-none"
-						style="
-							background-color: #000000;
-							opacity: {theme.isDark && theme.isSpotlightEnabled ? 1 : 0};
-							transition: opacity 0.5s ease;
-							mask-image: radial-gradient(circle 200px at var(--mask-x, var(--x)) var(--mask-y, var(--y)), rgba(0,0,0,0.1) 20%, black 80%);
-							-webkit-mask-image: radial-gradient(circle 200px at var(--mask-x, var(--x)) var(--mask-y, var(--y)), rgba(0,0,0,0.1) 20%, black 80%);
-							--x: {heroMaskPos.x}px;
-							--y: {heroMaskPos.y}px;
-						"
-					></div>
+					<!-- Layer 2: Darkness Overlay + Spotlight Hole (Active only when Spotlight is switched ON) -->
+					{#if theme.isDark && theme.isSpotlightEnabled}
+						<div
+							bind:this={heroContainer}
+							class="hero-mask-overlay absolute inset-0 z-20 pointer-events-none"
+							style="
+								background-color: #0a0a0a;
+								mask-image: radial-gradient(circle 200px at var(--mask-x, var(--x)) var(--mask-y, var(--y)), transparent 20%, black 80%);
+								-webkit-mask-image: radial-gradient(circle 200px at var(--mask-x, var(--x)) var(--mask-y, var(--y)), transparent 20%, black 80%);
+								--x: {heroMaskPos.x}px;
+								--y: {heroMaskPos.y}px;
+							"
+						></div>
+					{/if}
 				</div>
 				<div class="w-full md:w-[30%] flex flex-col gap-4 md:gap-5 text-right pb-1 md:pb-2">
 					<div class="flex flex-col gap-2">
@@ -431,7 +483,7 @@
 	</div>
 </section>
 
-<!-- Activity Section -->
+<!-- Activity Section (Overview) -->
 <div class="relative py-24 z-40 -mt-24 pt-48" use:reveal={{ threshold: 0.1 }}>
 	<div
 		class="absolute top-0 left-1/2 -translate-x-1/2 text-[15vw] font-bold text-gray-900 -z-10 select-none pointer-events-none leading-none tracking-tighter opacity-[0.03]"
@@ -442,166 +494,94 @@
 	<ActivitySection />
 </div>
 
-<!-- Projects Section -->
-<div
-	id="projects"
-	class="relative py-24 z-30 -mt-24 pt-48"
-	style="scroll-margin-top: 100px;"
-	use:reveal={{ threshold: 0.1 }}
->
+<!-- Services Section -->
+<div class="relative py-12 z-35" use:reveal={{ threshold: 0.1 }}>
 	<div
-		class="absolute top-10 right-10 text-[12vw] font-bold text-gray-900 -z-10 select-none pointer-events-none leading-none tracking-tighter opacity-[0.03] text-right"
+		class="absolute top-0 left-1/2 -translate-x-1/2 text-[15vw] font-bold text-gray-900 -z-10 select-none pointer-events-none leading-none tracking-tighter opacity-[0.03]"
 		style="font-family: 'Inter', sans-serif;"
 	>
-		PROJECTS
+		SERVICES
 	</div>
-
-	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-		<div class="mb-12">
-			{#key language.current}
-				<div in:fade={{ duration: 300 }}>
-					<h2
-						bind:this={projectsTitle}
-						class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-all duration-300 text-[#1A1A1A] dark:text-white"
-					>
-						{t.projects.title}
-					</h2>
-					<p class="text-lg transition-colors dark:text-zinc-400" style="color: #6B6B6B;">
-						{t.projects.desc}
-					</p>
-				</div>
-			{/key}
-		</div>
-
-		{#if categories.length > 0}
-			<div class="mb-10">
-				<CategoryFilter {categories} {selectedCategory} onSelect={handleCategorySelect} />
-			</div>
-		{/if}
-
-		{#if filteredProjects.length > 0}
-			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-				{#each filteredProjects as project (project.id)}
-					<div
-						animate:flip={{ duration: 400, easing: cubicOut }}
-						in:fly={{ y: 30, duration: 400, easing: cubicOut }}
-						out:fade={{ duration: 200 }}
-					>
-						<ProjectCard {project} />
-					</div>
-				{/each}
-			</div>
-		{:else}
-			<div
-				class="empty-state rounded-3xl bg-white p-16 text-center dark:bg-zinc-900/20"
-				in:fade={{ duration: 200 }}
-			>
-				<p class="text-lg" style="color: #6B6B6B;">
-					{selectedCategory === 'All'
-						? 'プロジェクトはまだありません'
-						: `「${selectedCategory}」カテゴリのプロジェクトはありません`}
-				</p>
-			</div>
-		{/if}
-	</div>
+	<ServicesSection />
 </div>
 
-<!-- News Section -->
-<div
-	id="news"
-	class="relative py-24 z-20 -mt-24 pt-48"
-	style="scroll-margin-top: 100px;"
-	use:reveal={{ threshold: 0.1 }}
->
+<!-- Contact Section -->
+<div class="relative py-12 z-35" use:reveal={{ threshold: 0.1 }}>
 	<div
-		class="absolute top-20 left-10 text-[15vw] font-bold text-gray-900 -z-10 select-none pointer-events-none leading-none tracking-tighter opacity-[0.03]"
+		class="absolute top-0 left-1/2 -translate-x-1/2 text-[15vw] font-bold text-gray-900 -z-10 select-none pointer-events-none leading-none tracking-tighter opacity-[0.03]"
 		style="font-family: 'Inter', sans-serif;"
 	>
-		{t.news.watermark}
+		CONTACT
 	</div>
+	<ContactSection />
+</div>
 
-	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-		<div class="mb-16">
-			<h2
-				bind:this={newsTitle}
-				class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-all duration-300 text-[#1A1A1A] dark:text-white"
-			>
-				{t.news.title}
+<!-- Quick Navigation Portal -->
+<div class="relative py-24 z-30 -mt-12" use:reveal={{ threshold: 0.1 }}>
+	<div class="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
+		<div class="mb-12">
+			<span class="font-mono text-xs tracking-[0.25em] text-zinc-500 uppercase">Explore Portal</span>
+			<h2 class="font-light text-3xl sm:text-4xl tracking-tight text-zinc-900 dark:text-zinc-100 mt-2">
+				コンテンツ一覧
 			</h2>
-			<p class="text-lg transition-colors dark:text-zinc-400" style="color: #6b6b6b;">
-				{t.news.desc}
-			</p>
 		</div>
 
-		<div class="grid gap-8 md:grid-cols-2">
-			{#each displayNews as item, i}
-				<button
-					type="button"
-					class="news-card group relative flex w-full flex-col overflow-hidden rounded-3xl text-left transition-all duration-500 hover:-translate-y-2 focus:outline-none focus:ring-4 focus:ring-gray-100 dark:bg-zinc-900/40 dark:border-white/10 dark:backdrop-blur-xl dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.3)]"
-					class:border-glow={theme.isScanLineActive}
-					style="backdrop-filter: blur(50px); border: 1px solid rgba(243, 244, 246, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01); {theme.isDark
-						? ''
-						: 'background: rgba(255, 255, 255, 0.5);'}"
-					onclick={() => navigateToNews(item)}
-					use:reveal={{ threshold: 0.1 }}
+		<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+			{#each portalCards as card (card.href)}
+				{@const Icon = card.icon}
+				<a
+					href={card.href}
+					use:spotlight
+					class="group relative flex min-h-[15rem] flex-col justify-between overflow-hidden rounded-2xl border border-zinc-200/80 bg-zinc-500/5 p-7 backdrop-blur-sm transition-all duration-500 hover:-translate-y-1.5 hover:bg-white dark:border-white/10 dark:bg-zinc-900/40 dark:hover:bg-zinc-900/80 {accentGlow[
+						card.accent
+					]}"
 				>
-					<div class="aspect-[16/9] w-full overflow-hidden" style="background-color: #F5F5F7;">
-						{#if item.coverUrl}
-							<img
-								src={item.coverUrl}
-								alt={item.title}
-								class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-							/>
-						{:else}
-							<div
-								class="flex h-full w-full items-center justify-center bg-gray-50 dark:bg-zinc-900"
-							>
-								<span class="text-4xl opacity-20 dark:opacity-50 dark:text-cyan-400">📰</span>
-							</div>
-						{/if}
+					<!-- mouse-following spotlight -->
+					<div
+						class="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+						style="background: radial-gradient(500px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(120,120,120,0.12), transparent 45%);"
+					></div>
+
+					<!-- giant index watermark -->
+					<span
+						class="pointer-events-none absolute -bottom-6 -right-2 select-none font-mono text-[6.5rem] font-black leading-none text-black/[0.04] transition-transform duration-500 group-hover:scale-110 dark:text-white/[0.05]"
+					>
+						{card.no}
+					</span>
+
+					<div class="relative z-10 flex items-start justify-between">
+						<div
+							class="inline-flex rounded-xl border border-black/5 bg-white p-2.5 shadow-sm dark:border-white/10 dark:bg-zinc-800 {accentIcon[
+								card.accent
+							]}"
+						>
+							<Icon class="h-5 w-5" />
+						</div>
+						<ArrowUpRight
+							class="h-4 w-4 text-zinc-400 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-zinc-900 dark:group-hover:text-white"
+						/>
 					</div>
 
-					<div class="flex flex-1 flex-col p-8">
-						<div class="mb-4 flex flex-wrap items-center gap-3">
-							<time class="text-sm font-medium" style="color: #8b8b8b;"
-								>{new Date(item.date).toLocaleDateString('ja-JP', {
-									year: 'numeric',
-									month: 'long',
-									day: 'numeric'
-								})}</time
-							>
-							{#if item.tags}
-								{#each item.tags as tag}
-									<span
-										class="rounded-full px-3 py-1 text-xs font-medium"
-										style="background: #F5F5F7; color: #1D1D1F;">{tag}</span
-									>
-								{/each}
-							{/if}
-						</div>
-						<h3
-							class="mb-3 text-2xl font-semibold leading-tight text-[#1d1d1f] group-hover:text-blue-600 transition-colors dark:text-zinc-100 dark:text-glow dark:group-hover:text-cyan-400"
-						>
-							{item.title}
+					<div class="relative z-10">
+						<h3 class="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+							{card.title}
 						</h3>
+						<p class="mt-2 text-xs font-light leading-relaxed text-zinc-500 dark:text-zinc-400">
+							{card.desc}
+						</p>
 						<div
-							class="mt-auto flex items-center gap-2 text-sm font-medium text-blue-500 dark:text-cyan-400"
+							class="mt-4 flex items-center gap-1.5 border-t border-black/5 pt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-400 transition-colors group-hover:text-zinc-900 dark:border-white/10 dark:group-hover:text-white"
 						>
-							{t.news.readMore}
+							開く
 							<ArrowRight
-								class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+								class="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1"
 							/>
 						</div>
 					</div>
-				</button>
+				</a>
 			{/each}
 		</div>
 	</div>
-</div>
-
-<!-- Schedule Section -->
-<div id="schedule" class="relative py-24 z-10 -mt-24 pt-48" style="scroll-margin-top: 100px;">
-	<ScheduleSection scheduleData={displayScheduleData} pastEventsByMonth={data.pastEventsByMonth} />
 </div>
 
 <!-- Hidden Terminal Message (Interactive Playground) -->
@@ -677,13 +657,6 @@
 			typing 3s steps(40, end) forwards 4s,
 			fade-in 0.1s forwards 4s;
 		width: 0;
-	}
-
-	.news-card {
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-	}
-	.news-card:hover {
-		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
 	}
 
 	/* Base Spotlight Styles */

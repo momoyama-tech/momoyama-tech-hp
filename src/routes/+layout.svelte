@@ -13,6 +13,7 @@
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import ContactModal from '$lib/components/ContactModal.svelte';
 	import { spring } from 'svelte/motion';
+	import { flushSync } from 'svelte';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import ThemeSwitcher from '$lib/components/ThemeSwitcher.svelte';
 	import { theme } from '$lib/stores/theme.svelte.js';
@@ -41,7 +42,9 @@
 	// Handle custom events from Command Palette or other components
 	$effect(() => {
 		if (typeof window !== 'undefined') {
-			const handleOpenContact = () => openContactModal();
+			/** @param {Event} e */
+			const handleOpenContact = (e) =>
+				openContactModal(/** @type {CustomEvent} */ (e)?.detail?.context ?? '');
 			/** @param {KeyboardEvent} e */
 			const handleKeydown = (e) => {
 				if (
@@ -60,15 +63,83 @@
 		}
 	});
 
+	import { onNavigate } from '$app/navigation';
 	import { language } from '$lib/stores/language.svelte.js';
 	import { translations } from '$lib/i18n/translations.js';
 
+	// Order of the main sections in the nav — decides which way the cube spins
+	const NAV_ORDER = ['/home', '/services', '/works', '/projects', '/schedule', '/contact'];
+
+	/** @param {string} pathname */
+	function sectionIndex(pathname) {
+		return NAV_ORDER.indexOf('/' + (pathname.split('/')[1] || ''));
+	}
+
+	/**
+	 * Spin right when moving further down the nav, left when moving back up.
+	 * Unknown routes fall back to right.
+	 * @param {string} fromPath
+	 * @param {string} toPath
+	 */
+	function cubeDirection(fromPath, toPath) {
+		const a = sectionIndex(fromPath);
+		const b = sectionIndex(toPath);
+		if (a === -1 || b === -1 || a === b) return 'right';
+		return b > a ? 'right' : 'left';
+	}
+
 	let t = $derived(translations[/** @type {'JP'|'EN'} */ (language.current)]);
 
+	// View Transitions API onNavigate handler
+	onNavigate((navigation) => {
+		// Any overlay tied to the persistent layout must close on navigation,
+		// otherwise it lingers on top of the next page. flushSync() forces the
+		// close into the DOM *before* the View Transition snapshots the page.
+		const hadOverlay = showContactModal || isMenuOpen;
+		if (hadOverlay) {
+			showContactModal = false;
+			isMenuOpen = false;
+			flushSync();
+		}
+
+		if (!document.startViewTransition) {
+			window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+			return;
+		}
+
+		// Pick the transition style: zoom-out + cube-flip + zoom-in for section
+		// changes, a plain crossfade for Contact (shown as a modal), when an
+		// overlay was just dismissed, and for visitors who asked for reduced motion.
+		const root = document.documentElement;
+		const fromPath = navigation.from?.url.pathname ?? '';
+		const toPath = navigation.to?.url.pathname ?? '';
+		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const involvesContact =
+			hadOverlay || fromPath.startsWith('/contact') || toPath.startsWith('/contact');
+
+		if (reduceMotion || involvesContact) {
+			root.dataset.pageTransition = 'plain';
+		} else {
+			root.dataset.pageTransition = 'cube';
+			root.dataset.cubeDir = cubeDirection(fromPath, toPath);
+		}
+
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+				window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+			});
+		});
+	});
+
 	let navItems = $derived([
-		{ href: '#projects', label: t.nav.projects },
-		{ href: '#news', label: t.nav.blog },
-		{ href: '#schedule', label: t.nav.schedule }
+		{ href: '/home', label: t.nav.about || 'ホーム' },
+		{ href: '/services', label: t.nav.services || 'サービス' },
+		{ href: '/works', label: t.nav.works || '実績' },
+		{ href: '/projects', label: t.nav.projects || 'プロジェクト' },
+		{ href: '/schedule', label: t.nav.schedule || 'スケジュール' },
+		{ href: '/contact', label: t.nav.contact || 'お問い合わせ', modal: true }
 	]);
 
 	let showContactModal = $state(false);
@@ -79,7 +150,11 @@
 	let footerSpotlightPos = spring({ x: 0, y: 0 }, { stiffness: 0.1, damping: 0.25 });
 	let footerBtnElement = $state();
 
-	function openContactModal() {
+	let contactContext = $state('');
+
+	/** @param {string} [context] optional topic to pre-fill the message with */
+	function openContactModal(context = '') {
+		contactContext = context;
 		showContactModal = true;
 	}
 	/*
@@ -179,6 +254,12 @@
 						<a
 							href={item.href}
 							class="text-sm font-medium tracking-[-0.02em] transition-colors text-[#1D1D1F] hover:opacity-70 dark:text-gray-400 dark:hover:text-white"
+							onclick={item.modal
+								? (e) => {
+										e.preventDefault();
+										openContactModal();
+									}
+								: undefined}
 						>
 							{item.label}
 						</a>
@@ -301,7 +382,13 @@
 					<a
 						href={item.href}
 						class="block rounded-2xl px-4 py-4 text-xl font-bold text-gray-900 transition-colors hover:bg-gray-50 hover:text-black dark:text-gray-100 dark:hover:bg-gray-900 dark:hover:text-white tracking-tight"
-						onclick={() => (isMenuOpen = false)}
+						onclick={(e) => {
+							if (item.modal) {
+								e.preventDefault();
+								openContactModal();
+							}
+							isMenuOpen = false;
+						}}
 						in:fly={{ y: 20, delay: i * 50, duration: 300, easing: cubicOut }}
 					>
 						{item.label}
@@ -418,11 +505,14 @@
 	{/if}
 </nav>
 
-<!-- Page content -->
-{@render children()}
+<!-- Page content — the pseudo-cube flip is driven by the View Transitions API
+     (see onNavigate above and the ::view-transition rules in layout.css) -->
+<div class="relative w-full flex-1 min-h-[calc(100vh-4rem)] overflow-x-hidden">
+	{@render children()}
+</div>
 
 <!-- Footer -->
-<footer class="bg-gray-50 py-16 dark:bg-gray-950">
+<footer class="bg-gray-50 py-16 dark:bg-gray-950 border-t border-zinc-200/80 dark:border-white/5 relative z-20">
 	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 		<div class="mb-10 text-center">
 			<p class="text-sm text-gray-500">
@@ -438,24 +528,34 @@
 					<h4 class="mb-3 font-medium text-gray-400">{t.footer.content}</h4>
 					<div class="space-y-2">
 						<a
-							href="#about"
+							href="/home"
 							class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white"
 							>{t.nav.about}</a
 						>
 						<a
-							href="#projects"
+							href="/services"
+							class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white"
+							>{t.nav.services}</a
+						>
+						<a
+							href="/works"
+							class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white"
+							>{t.nav.works}</a
+						>
+						<a
+							href="/projects"
 							class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white"
 							>{t.nav.projects}</a
 						>
 						<a
-							href="#news"
-							class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white"
-							>{t.nav.blog}</a
-						>
-						<a
-							href="#schedule"
+							href="/schedule"
 							class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white"
 							>{t.nav.schedule}</a
+						>
+						<a
+							href="/contact"
+							class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white"
+							>{t.nav.contact}</a
 						>
 					</div>
 				</div>
@@ -473,7 +573,7 @@
 						</a>
 						<div class="relative flex items-center gap-2">
 							<button
-								onclick={openContactModal}
+								onclick={() => openContactModal()}
 								class="block text-gray-500 transition-colors hover:text-black dark:hover:text-white text-left"
 							>
 								{t.footer.contact}
@@ -541,7 +641,7 @@
 
 					<button
 						bind:this={footerBtnElement}
-						onclick={openContactModal}
+						onclick={() => openContactModal()}
 						onmousemove={handleFooterBtnMove}
 						title={t.footer.contact}
 						class="group relative flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/20 cursor-pointer dark:bg-zinc-800 overflow-hidden"
@@ -574,32 +674,6 @@
 				</div>
 			</div>
 
-			<ContactModal
-				isOpen={showContactModal}
-				onClose={() => (showContactModal = false)}
-				onSuccess={() => {
-					showToast = true;
-					isFooterSuccess = true;
-					setTimeout(() => {
-						showToast = false;
-						isFooterSuccess = false;
-					}, 5000);
-				}}
-			/>
-
-			{#if showToast}
-				<div
-					transition:fade={{ duration: 200 }}
-					class="fixed bottom-12 left-1/2 z-[100] -translate-x-1/2 w-[90%] max-w-md text-center"
-				>
-					<div
-						class="rounded-2xl bg-black/90 px-6 py-4 text-sm font-medium text-white shadow-xl backdrop-blur-md dark:bg-white/90 dark:text-black"
-					>
-						お問い合わせありがとうございます。<br />内容を確認次第ご連絡いたします。
-					</div>
-				</div>
-			{/if}
-
 			<p class="text-xs text-gray-400 mt-8">
 				{t.footer.copy}
 				{t.footer.rights}
@@ -611,12 +685,42 @@
 <!-- Scan Line Overlay -->
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
 
+<!-- Contact modal + toast live at the layout root so their fixed overlays
+     are not trapped under the page sections' stacking contexts -->
+<ContactModal
+	isOpen={showContactModal}
+	initialContext={contactContext}
+	onClose={() => (showContactModal = false)}
+	onSuccess={() => {
+		showToast = true;
+		isFooterSuccess = true;
+		setTimeout(() => {
+			showToast = false;
+			isFooterSuccess = false;
+		}, 5000);
+	}}
+/>
+
+{#if showToast}
+	<div
+		transition:fade={{ duration: 200 }}
+		class="fixed bottom-12 left-1/2 z-[9999] -translate-x-1/2 w-[90%] max-w-md text-center"
+	>
+		<div
+			class="rounded-2xl bg-black/90 px-6 py-4 text-sm font-medium text-white shadow-xl backdrop-blur-md dark:bg-white/90 dark:text-black"
+		>
+			お問い合わせありがとうございます。<br />内容を確認次第ご連絡いたします。
+		</div>
+	</div>
+{/if}
+
 <!-- Command Palette -->
 
 <style>
 	:global(html.dark) {
 		color-scheme: dark;
 	}
+
 	@keyframes success-ripple {
 		0% {
 			transform: scale(1);

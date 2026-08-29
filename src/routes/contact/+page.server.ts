@@ -30,7 +30,7 @@ export const actions = {
             // 1. Send notification to admin
             await resend.emails.send({
                 from: 'onboarding@resend.dev',
-                to: 'tech@andrew.ac.jp',
+                to: 'momoyama.tech@gmail.com',
                 replyTo: type === 'quick' ? undefined : email,
                 subject: type === 'quick'
                     ? '【フッターより】クイックコンタクト'

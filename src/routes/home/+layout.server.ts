@@ -1,7 +1,7 @@
 import { getNews } from '$lib/server/news.js';
 import { getProjects } from '$lib/server/projects.js';
 import { getFutureSchedule, getPastEventsByMonth } from '$lib/server/schedule.js';
-import { notion, extractPlainText, extractFileUrl } from '$lib/server/notion.js';
+import { notion, extractPlainText, extractFileUrl, isNotionConfigured } from '$lib/server/notion.js';
 
 export const config = {
     isr: {
@@ -11,12 +11,25 @@ export const config = {
 
 /** @type {import('./$types').LayoutServerLoad} */
 export async function load({ setHeaders }) {
-    console.log('[HOME LOAD] Starting optimized parallel data fetch...');
-
     // Set Cache-Control headers for browser and CDN caching
     setHeaders({
         'cache-control': 'public, max-age=60, s-maxage=600'
     });
+
+    if (!isNotionConfigured) {
+        const [news, projects, scheduleData, pastEventsByMonth] = await Promise.all([
+            getNews(10),
+            getProjects(),
+            getFutureSchedule(),
+            getPastEventsByMonth()
+        ]);
+        return {
+            news,
+            projects,
+            scheduleData,
+            pastEventsByMonth
+        };
+    }
 
     try {
         // Fetch base data in parallel

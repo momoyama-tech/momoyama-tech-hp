@@ -9,11 +9,19 @@
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import CheckCircle2 from 'lucide-svelte/icons/check-circle-2';
 
-	let { isOpen, onClose, onSuccess } = $props();
+	let { isOpen, onClose, onSuccess, initialContext = '' } = $props();
 
 	/** @type {'idle' | 'submitting' | 'success' | 'error'} */
 	let status = $state('idle');
 	let errorMessage = $state('');
+	let content = $state('');
+
+	// Pre-fill the message when opened from a specific service card
+	$effect(() => {
+		if (isOpen) {
+			content = initialContext ? `「${initialContext}」について相談したいです。\n\n` : content;
+		}
+	});
 
 	function handleClose() {
 		if (status === 'submitting') return;
@@ -52,13 +60,13 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+		class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6"
 		role="dialog"
 		aria-modal="true"
 	>
 		<!-- Backdrop -->
 		<button
-			class="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
+			class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
 			onclick={handleClose}
 			aria-label="Close modal"
 			in:fade={{ duration: 200 }}
@@ -67,7 +75,7 @@
 
 		<!-- Modal Content -->
 		<div
-			class="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white/10 p-8 shadow-2xl ring-1 ring-white/10 backdrop-blur-2xl dark:bg-black/60 dark:ring-white/10"
+			class="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white p-8 shadow-2xl ring-1 ring-black/10 backdrop-blur-2xl dark:bg-black/60 dark:ring-white/10"
 			in:scale={{ start: 0.95, duration: 300, easing: cubicOut }}
 			out:scale={{ start: 0.95, duration: 200, easing: cubicOut }}
 		>
@@ -152,6 +160,7 @@
 								id="content"
 								rows="4"
 								required
+								bind:value={content}
 								placeholder="お問い合わせ内容をご記入ください"
 								class="w-full resize-none rounded-xl border-0 bg-gray-50 px-4 py-3 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-black dark:bg-black/50 dark:text-white dark:ring-white/10 dark:focus:ring-white"
 							></textarea>

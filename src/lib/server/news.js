@@ -1,4 +1,4 @@
-import { notion, DATABASE_IDS, extractPlainText, extractCoverUrl, getFallbackImage } from './notion.js';
+import { notion, DATABASE_IDS, extractPlainText, extractCoverUrl, getFallbackImage, isNotionConfigured } from './notion.js';
 import { NotionToMarkdown } from 'notion-to-md';
 import { marked } from 'marked';
 
@@ -15,6 +15,27 @@ const n2m = new NotionToMarkdown({ notionClient: notion });
  * @property {string} url - Page URL for linking
  */
 
+const MOCK_NEWS = [
+    {
+        id: 'mock-news-1',
+        title: '桃山学院大学テック部 2026年度 新歓イベント開催のお知らせ',
+        date: '2026-04-01',
+        summary: '新入生向けのプログラミング・映像制作体験会を実施します。初心者大歓迎！',
+        tags: ['イベント', '新歓'],
+        coverUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80',
+        url: ''
+    },
+    {
+        id: 'mock-news-2',
+        title: '企業連携Webアプリケーション開発プロジェクトが始動しました',
+        date: '2026-03-15',
+        summary: '学生チーム主導による実践的な共同開発プロジェクトがスタート。',
+        tags: ['プロジェクト', '共同開発'],
+        coverUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80',
+        url: ''
+    }
+];
+
 /**
  * Fetch published news items from Notion database
  * DB Properties: タイトル, 作成日, 公開日, URL, カテゴリー, ステータス
@@ -22,6 +43,10 @@ const n2m = new NotionToMarkdown({ notionClient: notion });
  * @returns {Promise<NewsItem[]>}
  */
 export async function getNews(limit = 10) {
+    if (!isNotionConfigured) {
+        return MOCK_NEWS;
+    }
+
     try {
         const response = await notion.databases.query({
             database_id: DATABASE_IDS.NEWS,
