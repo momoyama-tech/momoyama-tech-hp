@@ -7,11 +7,21 @@ import {
 } from '$env/static/private';
 
 /**
+ * Check if Notion API is properly configured with a real token
+ */
+export const isNotionConfigured = Boolean(
+    NOTION_API_KEY &&
+    NOTION_API_KEY !== 'secret_xxxxx' &&
+    !NOTION_API_KEY.includes('xxxxx') &&
+    NOTION_API_KEY.startsWith('secret_')
+);
+
+/**
  * Notion Client instance
  * @type {Client}
  */
 export const notion = new Client({
-    auth: NOTION_API_KEY
+    auth: isNotionConfigured ? NOTION_API_KEY : undefined
 });
 
 /**

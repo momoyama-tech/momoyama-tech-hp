@@ -1,4 +1,4 @@
-import { notion, DATABASE_IDS, extractPlainText } from './notion.js';
+import { notion, DATABASE_IDS, extractPlainText, isNotionConfigured } from './notion.js';
 
 /**
  * @typedef {Object} ScheduleEvent
@@ -19,11 +19,40 @@ import { notion, DATABASE_IDS, extractPlainText } from './notion.js';
  * @property {ScheduleEvent[]} events - Events in this month
  */
 
+const MOCK_FUTURE_SCHEDULE = {
+    nextEvent: {
+        id: 'mock-sched-1',
+        title: '定例活動・新企画ミーティング',
+        date: '2026-04-10',
+        endDate: '',
+        description: '部室 / Discord',
+        location: '第2サークル棟 部室',
+        isUpcoming: true,
+        isPast: false
+    },
+    upcomingEvents: [
+        {
+            id: 'mock-sched-2',
+            title: 'Webアプリ共同開発ハッカソン',
+            date: '2026-04-25',
+            endDate: '2026-04-26',
+            description: '合宿研修',
+            location: '学内PC演習室',
+            isUpcoming: true,
+            isPast: false
+        }
+    ]
+};
+
 /**
  * Get all future events grouped by split (Next Event + Upcoming Events)
  * @returns {Promise<{nextEvent: ScheduleEvent|null, upcomingEvents: ScheduleEvent[]}>}
  */
 export async function getFutureSchedule() {
+    if (!isNotionConfigured) {
+        return MOCK_FUTURE_SCHEDULE;
+    }
+
     try {
         // 1. Define today (Start of day in local time)
         const today = new Date();
@@ -111,6 +140,10 @@ export async function getFutureSchedule() {
  * @returns {Promise<MonthGroup[]>}
  */
 export async function getPastEventsByMonth() {
+    if (!isNotionConfigured) {
+        return [];
+    }
+
     try {
         const today = new Date().toISOString().split('T')[0];
 

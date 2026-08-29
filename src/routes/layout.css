@@ -25,7 +25,7 @@ html {
 body {
     /* Light Mode: Laboratory (Soft Gray, Slow Pulse, Line/Graph Grid) */
     --theme-accent: #9ca3af;
-    --theme-bg-grid: linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+    --theme-bg-grid: linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
     --theme-grid-size: 40px 40px;
     --theme-pulse: cubic-bezier(0.4, 0, 0.6, 1);
     --scan-line-color: rgba(0, 0, 0, 0.2);
@@ -40,14 +40,14 @@ body {
 }
 
 .dark body, .dark #root, .dark .app-container {
-    /* Dark Mode: Cyber (Cyan Blue, Sharp Fast Pulse, Dot Grid) */
+    /* Dark Mode: Cyber (Subtle Grid, Soft Accent) */
     --theme-accent: #06b6d4;
-    --theme-bg-grid: radial-gradient(#1f2937 1px, transparent 1px);
-    --theme-grid-size: 20px 20px;
+    --theme-bg-grid: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    --theme-grid-size: 24px 24px;
     --theme-pulse: cubic-bezier(0.1, 0.7, 1, 0.1);
     --scan-line-color: #06b6d4;
     
-    background-color: #000000 !important; /* Pure Black Force */
+    background-color: #0a0a0a !important; /* Premium Dark Background */
     color: #ffffff !important; /* White Text Force */
 }
 
@@ -186,4 +186,142 @@ body {
 
 .btn-interactive:active {
 	transform: scale(0.95);
+}
+
+/* ===================================================================
+   Page transition — rotating cube (View Transitions API)
+   onNavigate() in +layout.svelte tags <html> with:
+     data-page-transition="cube" | "plain"
+     data-cube-dir="right" | "left"   (nav order decides the spin)
+
+   The old and new screens are treated as two adjacent faces of one
+   solid cube. Both rotate together around the cube's centre axis
+   (--cube-half behind the screen), so mid-turn you actually see the
+   corner where the two faces meet. The whole cube also pulls back
+   (zoom-out) and returns (zoom-in) across the turn.
+   =================================================================== */
+
+/* half the cube's depth — the rotation axis sits this far behind the
+   screen. ~50vw ≈ a true cube; lower it for a shallower box. */
+:root {
+	--cube-half: 50vw;
+	--cube-dur: 0.9s;
+	--cube-ease: cubic-bezier(0.72, 0, 0.28, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	backface-visibility: hidden;
+	transform-origin: 50% 50%;
+}
+
+/* Plain crossfade — Contact modal + reduced-motion fallback */
+html[data-page-transition='plain']::view-transition-old(root) {
+	animation: vt-plain-fade 0.24s ease both;
+}
+html[data-page-transition='plain']::view-transition-new(root) {
+	animation: vt-plain-fade 0.28s ease reverse both;
+}
+@keyframes vt-plain-fade {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	/* the group carries the perspective + the zoom-out/zoom-in envelope */
+	html[data-page-transition='cube']::view-transition-group(root) {
+		perspective: 1700px;
+		perspective-origin: 50% 50%;
+		transform-origin: 50% 50%;
+		transform-style: preserve-3d;
+		overflow: visible;
+		animation: cube-zoom var(--cube-dur) var(--cube-ease) both;
+	}
+	html[data-page-transition='cube']::view-transition-image-pair(root) {
+		transform-style: preserve-3d;
+		overflow: visible;
+	}
+	html[data-page-transition='cube']::view-transition-old(root),
+	html[data-page-transition='cube']::view-transition-new(root) {
+		mix-blend-mode: normal;
+		animation-duration: var(--cube-dur);
+		animation-timing-function: var(--cube-ease);
+		animation-fill-mode: both;
+	}
+
+	/* dir=right : cube turns left, the new face swings in from the right */
+	html[data-page-transition='cube'][data-cube-dir='right']::view-transition-old(root) {
+		animation-name: cube-old-right;
+	}
+	html[data-page-transition='cube'][data-cube-dir='right']::view-transition-new(root) {
+		animation-name: cube-new-right;
+	}
+	/* dir=left : cube turns right, the new face swings in from the left */
+	html[data-page-transition='cube'][data-cube-dir='left']::view-transition-old(root) {
+		animation-name: cube-old-left;
+	}
+	html[data-page-transition='cube'][data-cube-dir='left']::view-transition-new(root) {
+		animation-name: cube-new-left;
+	}
+}
+
+/* Whole cube pulls back then comes forward */
+@keyframes cube-zoom {
+	0% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(0.7);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+/* --- turning left (new face from the right) --- */
+@keyframes cube-old-right {
+	from {
+		transform: translateZ(calc(-1 * var(--cube-half))) rotateY(0deg)
+			translateZ(var(--cube-half));
+	}
+	to {
+		transform: translateZ(calc(-1 * var(--cube-half))) rotateY(-90deg)
+			translateZ(var(--cube-half));
+	}
+}
+@keyframes cube-new-right {
+	from {
+		transform: translateZ(calc(-1 * var(--cube-half))) rotateY(90deg)
+			translateZ(var(--cube-half));
+	}
+	to {
+		transform: translateZ(calc(-1 * var(--cube-half))) rotateY(0deg)
+			translateZ(var(--cube-half));
+	}
+}
+
+/* --- turning right (new face from the left) --- */
+@keyframes cube-old-left {
+	from {
+		transform: translateZ(calc(-1 * var(--cube-half))) rotateY(0deg)
+			translateZ(var(--cube-half));
+	}
+	to {
+		transform: translateZ(calc(-1 * var(--cube-half))) rotateY(90deg)
+			translateZ(var(--cube-half));
+	}
+}
+@keyframes cube-new-left {
+	from {
+		transform: translateZ(calc(-1 * var(--cube-half))) rotateY(-90deg)
+			translateZ(var(--cube-half));
+	}
+	to {
+		transform: translateZ(calc(-1 * var(--cube-half))) rotateY(0deg)
+			translateZ(var(--cube-half));
+	}
 }

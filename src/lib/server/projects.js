@@ -1,4 +1,4 @@
-import { notion, DATABASE_IDS, extractPlainText, extractCoverUrl, getFallbackImage } from './notion.js';
+import { notion, DATABASE_IDS, extractPlainText, extractCoverUrl, getFallbackImage, isNotionConfigured } from './notion.js';
 
 /**
  * @typedef {Object} Project
@@ -12,11 +12,50 @@ import { notion, DATABASE_IDS, extractPlainText, extractCoverUrl, getFallbackIma
  * @property {string} creator - Creator name
  */
 
+const MOCK_PROJECTS = [
+    {
+        id: 'mock-1',
+        title: '桃山祭 プロジェクションマッピング 2025',
+        description: '大学祭のメインステージにて実施した、学生制作のプロジェクションマッピング演出。',
+        category: '映像演出',
+        coverUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80',
+        tags: ['#映像演出', '#TouchDesigner', '#空間デザイン'],
+        url: '',
+        creator: '映像班'
+    },
+    {
+        id: 'mock-2',
+        title: 'テック部 公式ポータルサイト',
+        description: 'SvelteKitとTailwind CSSを採用した高速でインタラクティブな部活公式Webサイト。',
+        category: 'Web開発',
+        coverUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=800&q=80',
+        tags: ['#SvelteKit', '#TailwindCSS', '#TypeScript'],
+        url: '',
+        creator: 'Web班'
+    },
+    {
+        id: 'mock-3',
+        title: '地域小学生向けプログラミング体験教室',
+        description: 'Scratchとマイクロビットを活用した子ども向けIT体験ワークショップの企画・運営。',
+        category: 'IT教育',
+        coverUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
+        tags: ['#Scratch', '#microbit', '#地域共創'],
+        url: '',
+        creator: '教育班'
+    }
+];
+
+const MOCK_CATEGORIES = ['Web開発', '映像演出', 'IT教育', 'ゲーム開発'];
+
 /**
  * Fetch all published projects from Notion database
  * @returns {Promise<Project[]>}
  */
 export async function getProjects() {
+    if (!isNotionConfigured) {
+        return MOCK_PROJECTS;
+    }
+
     try {
         // Query without Web公開 filter since it may not exist
         const response = await notion.databases.query({
@@ -76,6 +115,10 @@ export async function getProjects() {
  * @returns {Promise<string[]>}
  */
 export async function getCategories() {
+    if (!isNotionConfigured) {
+        return MOCK_CATEGORIES;
+    }
+
     try {
         const database = await notion.databases.retrieve({
             database_id: DATABASE_IDS.PROJECT

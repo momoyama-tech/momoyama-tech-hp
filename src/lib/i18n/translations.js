@@ -5,6 +5,9 @@ export const translations = {
             projects: "プロジェクト",
             blog: "ニュース",
             schedule: "スケジュール",
+            services: "サービス",
+            works: "実績",
+            contact: "お問い合わせ",
             follow: "Follow"
         },
         hero: {
@@ -71,6 +74,9 @@ export const translations = {
             projects: "PROJECTS",
             blog: "NEWS",
             schedule: "SCHEDULE",
+            services: "SERVICES",
+            works: "WORKS",
+            contact: "CONTACT",
             follow: "Follow"
         },
         hero: {
