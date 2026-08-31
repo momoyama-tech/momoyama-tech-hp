@@ -1,36 +1,32 @@
 import { Client } from '@notionhq/client';
-import {
-    NOTION_API_KEY,
-    NOTION_NEWS_DB_ID,
-    NOTION_PROJECT_DB_ID,
-    NOTION_SCHEDULE_DB_ID
-} from '$env/static/private';
+// Runtime env: updating these on the host does NOT require a rebuild.
+import { env } from '$env/dynamic/private';
+
+const NOTION_API_KEY = env.NOTION_API_KEY ?? '';
 
 /**
- * Check if Notion API is properly configured with a real token
+ * Whether a real Notion token is present (accepts both the legacy `secret_`
+ * and the current `ntn_` token formats). When false, the data layer falls
+ * back to the built-in sample data.
  */
-export const isNotionConfigured = Boolean(
-    NOTION_API_KEY &&
-    NOTION_API_KEY !== 'secret_xxxxx' &&
-    !NOTION_API_KEY.includes('xxxxx') &&
-    NOTION_API_KEY.startsWith('secret_')
-);
+export const isNotionConfigured =
+	/^(secret_|ntn_)/.test(NOTION_API_KEY) && !NOTION_API_KEY.includes('xxxxx');
 
 /**
  * Notion Client instance
  * @type {Client}
  */
 export const notion = new Client({
-    auth: isNotionConfigured ? NOTION_API_KEY : undefined
+	auth: isNotionConfigured ? NOTION_API_KEY : undefined
 });
 
 /**
  * Database IDs for Notion databases
  */
 export const DATABASE_IDS = {
-    NEWS: NOTION_NEWS_DB_ID,
-    PROJECT: NOTION_PROJECT_DB_ID,
-    SCHEDULE: NOTION_SCHEDULE_DB_ID
+	NEWS: env.NOTION_NEWS_DB_ID ?? '',
+	PROJECT: env.NOTION_PROJECT_DB_ID ?? '',
+	SCHEDULE: env.NOTION_SCHEDULE_DB_ID ?? ''
 };
 
 /**
@@ -39,8 +35,8 @@ export const DATABASE_IDS = {
  * @returns {string}
  */
 export function extractPlainText(richTextArray) {
-    if (!richTextArray || !Array.isArray(richTextArray)) return '';
-    return richTextArray.map((text) => text.plain_text).join('');
+	if (!richTextArray || !Array.isArray(richTextArray)) return '';
+	return richTextArray.map((text) => text.plain_text).join('');
 }
 
 /**
@@ -49,14 +45,14 @@ export function extractPlainText(richTextArray) {
  * @returns {string|null}
  */
 export function extractFileUrl(fileProperty) {
-    if (!fileProperty) return null;
-    if (fileProperty.type === 'external') {
-        return fileProperty.external?.url || null;
-    }
-    if (fileProperty.type === 'file') {
-        return fileProperty.file?.url || null;
-    }
-    return null;
+	if (!fileProperty) return null;
+	if (fileProperty.type === 'external') {
+		return fileProperty.external?.url || null;
+	}
+	if (fileProperty.type === 'file') {
+		return fileProperty.file?.url || null;
+	}
+	return null;
 }
 
 /**
@@ -65,8 +61,8 @@ export function extractFileUrl(fileProperty) {
  * @returns {string|null}
  */
 export function extractCoverUrl(page) {
-    if (!page.cover) return null;
-    return extractFileUrl(page.cover);
+	if (!page.cover) return null;
+	return extractFileUrl(page.cover);
 }
 
 /**
@@ -75,5 +71,5 @@ export function extractCoverUrl(page) {
  * @returns {string}
  */
 export function getFallbackImage(seed = 'tech') {
-    return `https://picsum.photos/seed/${seed}/800/600`;
+	return `https://picsum.photos/seed/${seed}/800/600`;
 }
