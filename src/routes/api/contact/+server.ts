@@ -31,15 +31,23 @@ export async function POST({ request }) {
 		}
 
 		const resendApiKey = env.RESEND_API_KEY;
-		const receiveEmail = env.CONTACT_RECEIVE_EMAIL || 'tech@andrew.ac.jp';
+		const receiveEmail = env.CONTACT_RECEIVE_EMAIL || 'momoyama.tech@gmail.com';
 		const discordWebhookUrl = env.DISCORD_WEBHOOK_URL;
+		// Sender address. Before a domain is verified in Resend this must stay
+		// `onboarding@resend.dev`; after verifying momotech.club, set
+		// MAIL_FROM="Momoyama Tech <noreply@momotech.club>" in the host env.
+		const mailFrom = env.MAIL_FROM || 'Momoyama Tech <onboarding@resend.dev>';
+
+		let emailSent = false;
+		let discordSent = false;
 
 		// 3. Send email via Resend if API key is provided
 		if (resendApiKey) {
-			const resend = new Resend(resendApiKey);
+			try {
+				const resend = new Resend(resendApiKey);
 
-			// Admin notification email
-			const adminEmailHtml = `
+				// Admin notification email
+				const adminEmailHtml = `
 				<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 12px; background-color: #ffffff;">
 					<h2 style="color: #0f172a; border-bottom: 2px solid #06b6d4; padding-bottom: 10px; margin-top: 0;">
 						【公式サイト】新規お問い合わせ・ご相談を受信しました
@@ -77,16 +85,17 @@ export async function POST({ request }) {
 				</div>
 			`;
 
-			await resend.emails.send({
-				from: 'Momoyama Tech <onboarding@resend.dev>',
-				to: receiveEmail,
-				replyTo: email,
-				subject: `【お問い合わせ】${serviceType ? `[${serviceType}] ` : ''}${name}様より`,
-				html: adminEmailHtml
-			});
+				await resend.emails.send({
+					from: mailFrom,
+					to: receiveEmail,
+					replyTo: email,
+					subject: `【お問い合わせ】${serviceType ? `[${serviceType}] ` : ''}${name}様より`,
+					html: adminEmailHtml
+				});
+				emailSent = true;
 
-			// User Auto-Reply confirmation email
-			const userReplyHtml = `
+				// User Auto-Reply confirmation email
+				const userReplyHtml = `
 				<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 12px; background-color: #ffffff;">
 					<h2 style="color: #0f172a; border-bottom: 2px solid #06b6d4; padding-bottom: 10px; margin-top: 0;">
 						お問い合わせありがとうございます
@@ -118,16 +127,21 @@ export async function POST({ request }) {
 				</div>
 			`;
 
-			try {
-				await resend.emails.send({
-					from: 'Momoyama Tech <onboarding@resend.dev>',
-					to: email,
-					subject: '【桃山学院大学テック部】お問い合わせを受け付けました（自動送信）',
-					html: userReplyHtml
-				});
-			} catch (replyErr) {
-				console.warn('Auto-reply email failed:', replyErr);
-				// Do not fail the whole request if auto-reply fails
+				try {
+					await resend.emails.send({
+						from: mailFrom,
+						to: email,
+						subject: '【桃山学院大学テック部】お問い合わせを受け付けました（自動送信）',
+						html: userReplyHtml
+					});
+				} catch (replyErr) {
+					console.warn('Auto-reply email failed:', replyErr);
+					// Do not fail the whole request if auto-reply fails
+				}
+			} catch (mailErr) {
+				// Email failed entirely (bad key, unverified sender domain, …).
+				// Fall through so a configured Discord webhook can still deliver.
+				console.error('Email delivery failed:', mailErr);
 			}
 		} else {
 			console.warn('RESEND_API_KEY is not set. Email not sent.');
@@ -136,7 +150,7 @@ export async function POST({ request }) {
 		// 4. Send Discord Webhook Notification if URL is configured
 		if (discordWebhookUrl) {
 			try {
-				await fetch(discordWebhookUrl, {
+				const dcRes = await fetch(discordWebhookUrl, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
@@ -164,17 +178,35 @@ export async function POST({ request }) {
 						]
 					})
 				});
+				discordSent = dcRes.ok;
 			} catch (discordErr) {
 				console.error('Discord Webhook notification failed:', discordErr);
 				// Non-critical, continue
 			}
 		}
 
+		// If nothing was actually delivered, tell the user instead of a false success.
+		if (!emailSent && !discordSent) {
+			console.error(
+				'Contact form: no delivery channel configured (RESEND_API_KEY / DISCORD_WEBHOOK_URL).'
+			);
+			return json(
+				{
+					success: false,
+					error: '現在お問い合わせを受け付けられません。お手数ですが直接メールでご連絡ください。'
+				},
+				{ status: 503 }
+			);
+		}
+
 		return json({ success: true, message: 'お問い合わせを送信しました。' });
 	} catch (error) {
 		console.error('API Contact Error:', error);
 		return json(
-			{ success: false, error: 'サーバー内部エラーが発生しました。時間をおいて再送信してください。' },
+			{
+				success: false,
+				error: 'サーバー内部エラーが発生しました。時間をおいて再送信してください。'
+			},
 			{ status: 500 }
 		);
 	}

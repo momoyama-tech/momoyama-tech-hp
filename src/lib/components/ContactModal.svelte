@@ -1,8 +1,6 @@
 <script>
-	import { enhance } from '$app/forms';
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { createEventDispatcher } from 'svelte';
 	// Direct imports based on existing project pattern
 	import X from 'lucide-svelte/icons/x';
 	import Send from 'lucide-svelte/icons/send';
@@ -14,7 +12,10 @@
 	/** @type {'idle' | 'submitting' | 'success' | 'error'} */
 	let status = $state('idle');
 	let errorMessage = $state('');
+	let name = $state('');
+	let email = $state('');
 	let content = $state('');
+	let honeyPot = $state('');
 
 	// Pre-fill the message when opened from a specific service card
 	$effect(() => {
@@ -34,27 +35,42 @@
 		}, 500);
 	}
 
-	/** @type {import('@sveltejs/kit').SubmitFunction} */
-	function handleSubmit({ cancel }) {
-		status = 'submitting';
+	/** @param {SubmitEvent} e */
+	async function handleSubmit(e) {
+		e.preventDefault();
+		if (status === 'submitting') return;
 
-		return async ({ result, update }) => {
-			if (result.type === 'success') {
-				status = 'success';
-				if (onSuccess) onSuccess(); // Signal parent
-				await update({ reset: true });
-				setTimeout(() => {
-					handleClose();
-				}, 2000);
-			} else {
-				status = 'error';
-				errorMessage = '送信に失敗しました。時間をおいて再送してください。';
-				setTimeout(() => {
-					status = 'idle';
-				}, 3000);
-				await update({ reset: false });
+		status = 'submitting';
+		errorMessage = '';
+
+		try {
+			// Uses the runtime-env endpoint so email works once Netlify env vars
+			// are set — no rebuild needed.
+			const res = await fetch('/api/contact', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name, email, message: content, _hp: honeyPot })
+			});
+			const data = await res.json().catch(() => ({}));
+
+			if (!res.ok || data.success === false) {
+				throw new Error(data.error || '送信に失敗しました。時間をおいて再送してください。');
 			}
-		};
+
+			status = 'success';
+			name = '';
+			email = '';
+			content = '';
+			if (onSuccess) onSuccess();
+			setTimeout(handleClose, 2000);
+		} catch (err) {
+			status = 'error';
+			errorMessage =
+				err instanceof Error ? err.message : '送信に失敗しました。時間をおいて再送してください。';
+			setTimeout(() => {
+				if (status === 'error') status = 'idle';
+			}, 4000);
+		}
 	}
 </script>
 
@@ -116,7 +132,19 @@
 						</p>
 					</div>
 				{:else}
-					<form method="POST" action="/contact" use:enhance={handleSubmit} class="space-y-5">
+					<form onsubmit={handleSubmit} class="space-y-5">
+						<!-- Honeypot (hidden from humans) -->
+						<div class="hidden" aria-hidden="true">
+							<label for="hp_modal">Do not fill this</label>
+							<input
+								type="text"
+								id="hp_modal"
+								tabindex="-1"
+								autocomplete="off"
+								bind:value={honeyPot}
+							/>
+						</div>
+
 						<div class="space-y-1">
 							<label
 								for="name"
@@ -128,6 +156,7 @@
 								name="name"
 								id="name"
 								required
+								bind:value={name}
 								placeholder="お名前"
 								class="w-full rounded-xl border-0 bg-gray-50 px-4 py-3 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-black dark:bg-black/50 dark:text-white dark:ring-white/10 dark:focus:ring-white"
 							/>
@@ -144,6 +173,7 @@
 								name="email"
 								id="email"
 								required
+								bind:value={email}
 								placeholder="example@andrew.ac.jp"
 								class="w-full rounded-xl border-0 bg-gray-50 px-4 py-3 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-black dark:bg-black/50 dark:text-white dark:ring-white/10 dark:focus:ring-white"
 							/>
