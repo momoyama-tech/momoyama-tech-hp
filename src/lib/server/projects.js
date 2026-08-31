@@ -11,7 +11,8 @@ import {
  * @property {string} id - Page ID
  * @property {string} title - Project title
  * @property {string} description - Project description
- * @property {string} category - Project category (Game, Web, etc.)
+ * @property {string} category - Primary category (first tag)
+ * @property {string[]} [categories] - All category tags
  * @property {string|null} coverUrl - Cover image URL
  * @property {string[]} tags - Additional tags
  * @property {string} url - External project URL
@@ -53,8 +54,6 @@ const MOCK_PROJECTS = [
 		creator: '教育班'
 	}
 ];
-
-const MOCK_CATEGORIES = ['Web開発', '映像演出', 'IT教育', 'ゲーム開発'];
 
 /**
  * Fetch all published projects from Notion database
@@ -121,32 +120,6 @@ export async function getProjects() {
 }
 
 /**
- * Get all unique categories from projects
- * @returns {Promise<string[]>}
- */
-export async function getCategories() {
-	if (!isNotionConfigured) {
-		return MOCK_CATEGORIES;
-	}
-
-	try {
-		const database = await notion.databases.retrieve({
-			database_id: DATABASE_IDS.PROJECT
-		});
-
-		// DB uses カテゴリ
-		const categoryProperty = database.properties?.カテゴリ || database.properties?.Category;
-		if (categoryProperty?.type === 'select' && categoryProperty.select?.options) {
-			return categoryProperty.select.options.map((option) => option.name);
-		}
-		return [];
-	} catch (error) {
-		console.error('Error fetching categories:', error);
-		return [];
-	}
-}
-
-/**
  * Parse Notion page to Project object
  * Using actual Japanese property names from DB
  * @param {any} page
@@ -162,8 +135,13 @@ function parseProject(page) {
 		title,
 		// No description property in this DB
 		description: '',
-		// DB uses カテゴリ or Category (handled in getCategories but here just accessing prop)
-		category: props?.カテゴリ?.select?.name || '',
+		// DB uses カテゴリ (multi_select); keep a primary + the full list
+		category: props?.カテゴリ?.multi_select?.[0]?.name || props?.カテゴリ?.select?.name || '',
+		categories: (
+			props?.カテゴリ?.multi_select || (props?.カテゴリ?.select ? [props.カテゴリ.select] : [])
+		)
+			.map((/** @type {any} */ o) => o.name)
+			.filter(Boolean),
 		// null when no cover is set — ProjectCard renders a generated placeholder.
 		coverUrl: extractCoverUrl(page),
 		tags: [],
