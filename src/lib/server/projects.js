@@ -55,8 +55,12 @@ const MOCK_PROJECTS = [
 	}
 ];
 
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+/** @type {{ data: Project[] | null, at: number }} */
+let _cache = { data: null, at: 0 };
+
 /**
- * Fetch all published projects from Notion database
+ * Fetch all projects from Notion (cached in memory, stale-served on error).
  * @returns {Promise<Project[]>}
  */
 export async function getProjects() {
@@ -64,59 +68,65 @@ export async function getProjects() {
 		return MOCK_PROJECTS;
 	}
 
+	if (_cache.data && Date.now() - _cache.at < CACHE_TTL) {
+		return _cache.data;
+	}
+
 	try {
-		// Query without Web公開 filter since it may not exist
-		const response = await notion.databases.query({
-			database_id: DATABASE_IDS.PROJECT,
-			sorts: [
-				{
-					timestamp: 'created_time',
-					direction: 'descending'
-				}
-			]
-		});
-
-		// Fetch creator names for each project
-		const projectsWithNulls = await Promise.all(
-			response.results.map(async (page) => {
-				if (!('properties' in page)) return null;
-
-				/** @type {any} */
-				const safePage = page;
-				const project = parseProject(safePage);
-
-				// Get creator from relation - DB uses 部員名簿
-				const props = safePage.properties;
-				const creatorRelation = props?.部員名簿?.relation;
-				if (creatorRelation && creatorRelation.length > 0) {
-					try {
-						const creatorPage = await notion.pages.retrieve({ page_id: creatorRelation[0].id });
-						if ('properties' in creatorPage) {
-							/** @type {any} */
-							const safeCreator = creatorPage;
-							const creatorProps = safeCreator.properties;
-							// Member database uses 名前 as title
-							project.creator =
-								extractPlainText(creatorProps?.名前?.title || creatorProps?.Name?.title) || '';
-						}
-					} catch (e) {
-						console.error('Error fetching creator:', e);
-						project.creator = '';
-					}
-				}
-				return project;
-			})
-		);
-
-		/** @type {Project[]} */
-		// @ts-ignore
-		const projects = projectsWithNulls.filter((p) => p !== null);
-
+		const projects = await fetchProjectsFromNotion();
+		_cache = { data: projects, at: Date.now() };
 		return projects;
 	} catch (error) {
 		console.error('Error fetching projects from Notion:', error);
-		return [];
+		// Serve the last good result rather than an empty list.
+		return _cache.data ?? [];
 	}
+}
+
+/**
+ * @returns {Promise<Project[]>}
+ */
+async function fetchProjectsFromNotion() {
+	const response = await notion.databases.query({
+		database_id: DATABASE_IDS.PROJECT,
+		sorts: [{ timestamp: 'created_time', direction: 'descending' }]
+	});
+
+	/** @type {any[]} */
+	const pages = response.results.filter((p) => 'properties' in p);
+
+	/**
+	 * @param {any} page
+	 * @returns {string[]}
+	 */
+	const memberRelIds = (page) =>
+		(page.properties?.部員名簿?.relation || []).map((/** @type {any} */ r) => r.id);
+
+	// Resolve every creator (部員名簿 relation) in ONE batch of unique lookups,
+	// instead of one request per project.
+	const creatorIds = [...new Set(pages.flatMap(memberRelIds))];
+
+	/** @type {Map<string, string>} */
+	const creatorNames = new Map();
+	await Promise.all(
+		creatorIds.map(async (id) => {
+			try {
+				const page = await notion.pages.retrieve({ page_id: id });
+				if ('properties' in page) {
+					const cp = /** @type {any} */ (page).properties;
+					creatorNames.set(id, extractPlainText(cp?.名前?.title || cp?.Name?.title) || '');
+				}
+			} catch (e) {
+				console.error('Error fetching creator:', e);
+			}
+		})
+	);
+
+	return pages.map((page) => {
+		const project = parseProject(page);
+		project.creator = creatorNames.get(memberRelIds(page)[0]) || '';
+		return project;
+	});
 }
 
 /**
