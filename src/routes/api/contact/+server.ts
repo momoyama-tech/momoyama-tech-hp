@@ -31,7 +31,7 @@ export async function POST({ request }) {
 		}
 
 		const resendApiKey = env.RESEND_API_KEY;
-		const receiveEmail = env.CONTACT_RECEIVE_EMAIL || 'tech@andrew.ac.jp';
+		const receiveEmail = env.CONTACT_RECEIVE_EMAIL || 'momoyama.tech@gmail.com';
 		const discordWebhookUrl = env.DISCORD_WEBHOOK_URL;
 		// Sender address. Before a domain is verified in Resend this must stay
 		// `onboarding@resend.dev`; after verifying momotech.club, set
