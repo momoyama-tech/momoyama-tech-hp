@@ -12,7 +12,9 @@
 	const filteredProjects = $derived(
 		selectedCategory === 'All'
 			? data.projects
-			: data.projects.filter((p: any) => p.category === selectedCategory)
+			: data.projects.filter(
+					(p: any) => p.categories?.includes(selectedCategory) || p.category === selectedCategory
+				)
 	);
 
 	function handleCategorySelect(category: string) {
