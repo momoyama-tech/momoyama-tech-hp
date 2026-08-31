@@ -5,6 +5,7 @@ import {
 	extractCoverUrl,
 	isNotionConfigured
 } from './notion.js';
+import { withCache } from './cache.js';
 
 /**
  * @typedef {Object} Project
@@ -55,33 +56,19 @@ const MOCK_PROJECTS = [
 	}
 ];
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-/** @type {{ data: Project[] | null, at: number }} */
-let _cache = { data: null, at: 0 };
-
 /**
- * Fetch all projects from Notion (cached in memory, stale-served on error).
- * @returns {Promise<Project[]>}
+ * Fetch all projects from Notion. Cached in memory (see withCache).
+ * @type {() => Promise<Project[]>}
  */
-export async function getProjects() {
-	if (!isNotionConfigured) {
-		return MOCK_PROJECTS;
-	}
-
-	if (_cache.data && Date.now() - _cache.at < CACHE_TTL) {
-		return _cache.data;
-	}
-
+export const getProjects = withCache(async () => {
+	if (!isNotionConfigured) return MOCK_PROJECTS;
 	try {
-		const projects = await fetchProjectsFromNotion();
-		_cache = { data: projects, at: Date.now() };
-		return projects;
+		return await fetchProjectsFromNotion();
 	} catch (error) {
 		console.error('Error fetching projects from Notion:', error);
-		// Serve the last good result rather than an empty list.
-		return _cache.data ?? [];
+		return [];
 	}
-}
+});
 
 /**
  * @returns {Promise<Project[]>}
