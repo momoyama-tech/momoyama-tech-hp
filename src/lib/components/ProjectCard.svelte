@@ -21,12 +21,17 @@
 	 */
 	let { project } = $props();
 
-	/**
-	 * @param {any} e
-	 */
-	function handleImageError(e) {
-		e.currentTarget.style.display = 'none';
-	}
+	// Notion cover URLs are signed and expire, and many projects have no cover
+	// at all — fall back to a generated gradient keyed to the project.
+	let imgFailed = $state(false);
+	const hue = $derived(
+		[...(project.id || project.title || 'tech')].reduce(
+			(acc, ch) => (acc * 33 + ch.charCodeAt(0)) % 360,
+			11
+		)
+	);
+	const initial = $derived((project.title || '?').trim().charAt(0).toUpperCase() || '?');
+	const showImage = $derived(Boolean(project.coverUrl) && !imgFailed);
 
 	let parallaxX = $state(0);
 	let parallaxY = $state(0);
@@ -75,22 +80,22 @@
 
 	<!-- Cover Image -->
 	<div class="relative aspect-[4/3] overflow-hidden" style="background-color: #F5F5F7;">
-		{#if project.coverUrl}
+		{#if showImage}
 			<img
 				src={project.coverUrl}
 				alt={project.title}
 				loading="lazy"
-				onerror={handleImageError}
+				onerror={() => (imgFailed = true)}
 				class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
 			/>
 		{:else}
+			<!-- Generated placeholder cover -->
 			<div
-				class="flex h-full items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-zinc-900 dark:to-black"
+				class="ph-cover flex h-full items-center justify-center transition-transform duration-700 group-hover:scale-105"
+				style="--h: {hue};"
+				aria-hidden="true"
 			>
-				<span
-					class="text-6xl opacity-30 dark:opacity-80 dark:text-cyan-400 dark:drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]"
-					>📁</span
-				>
+				<span class="ph-initial select-none font-black tracking-tighter">{initial}</span>
 			</div>
 		{/if}
 
@@ -170,5 +175,25 @@
 
 	.project-card:hover {
 		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+	}
+
+	/* Generated cover placeholder — deterministic gradient from --h (0–360) */
+	.ph-cover {
+		background:
+			radial-gradient(120% 120% at 15% 15%, hsl(calc(var(--h) + 35) 70% 88%), transparent 60%),
+			linear-gradient(135deg, hsl(var(--h) 68% 84%), hsl(calc(var(--h) + 50) 60% 72%));
+	}
+	:global(.dark) .ph-cover {
+		background:
+			radial-gradient(120% 120% at 15% 15%, hsl(calc(var(--h) + 35) 45% 22%), transparent 60%),
+			linear-gradient(135deg, hsl(var(--h) 40% 16%), hsl(calc(var(--h) + 50) 45% 10%));
+	}
+	.ph-initial {
+		font-size: clamp(3rem, 9vw, 5rem);
+		color: rgba(255, 255, 255, 0.55);
+		text-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+	}
+	:global(.dark) .ph-initial {
+		color: hsl(var(--h) 60% 70% / 0.5);
 	}
 </style>
