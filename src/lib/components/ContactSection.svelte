@@ -6,6 +6,7 @@
 	import Mail from 'lucide-svelte/icons/mail';
 	import { spotlight } from '$lib/actions/spotlight.js';
 	import { localize } from '$lib/i18n/localize.svelte.js';
+	import { submitInquiry } from '$lib/contact.js';
 
 	const serviceTypes = [
 		'Webサイト・LP制作',
@@ -68,29 +69,17 @@
 		status = 'submitting';
 		errorMessage = '';
 
-		try {
-			const res = await fetch('/api/contact', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					name,
-					company,
-					email,
-					serviceType,
-					budgetDeadline,
-					message,
-					_hp: honeyPot
-				})
-			});
+		const { ok, error } = await submitInquiry({
+			name,
+			email,
+			message,
+			company,
+			serviceType,
+			budgetDeadline,
+			honeyPot
+		});
 
-			const data = await res.json().catch(() => ({}));
-
-			if (!res.ok) {
-				throw new Error(data.error || c.value.errSend);
-			}
-
+		if (ok) {
 			status = 'success';
 			name = '';
 			company = '';
@@ -98,13 +87,9 @@
 			serviceType = 'Webサイト・LP制作';
 			budgetDeadline = '';
 			message = '';
-		} catch (err) {
-			console.error('Contact Form Error:', err);
+		} else {
 			status = 'error';
-			errorMessage =
-				err instanceof Error
-					? err.message
-					: c.value.errNetwork;
+			errorMessage = error || c.value.errNetwork;
 		}
 	}
 </script>
@@ -128,13 +113,17 @@
 		<!-- Section Header -->
 		<div class="mb-16">
 			<div class="mb-3">
-				<p class="font-mono text-xs tracking-[0.25em] text-cyan-600 dark:text-cyan-400 uppercase font-semibold">
+				<p
+					class="font-mono text-xs tracking-[0.25em] text-cyan-600 dark:text-cyan-400 uppercase font-semibold"
+				>
 					Contact & Consultation
 				</p>
 			</div>
 
 			<div>
-				<h2 class="font-bold text-3xl sm:text-4xl md:text-5xl tracking-tight text-[#1D1D1F] dark:text-white mb-4">
+				<h2
+					class="font-bold text-3xl sm:text-4xl md:text-5xl tracking-tight text-[#1D1D1F] dark:text-white mb-4"
+				>
 					{c.value.heading}
 				</h2>
 				<p class="text-zinc-600 dark:text-zinc-300 text-base max-w-2xl leading-relaxed">
@@ -143,7 +132,9 @@
 			</div>
 
 			<div class="mt-8 relative h-px w-full bg-black/10 dark:bg-white/10 overflow-hidden">
-				<div class="absolute inset-0 bg-linear-to-r from-cyan-500/50 via-black/10 dark:via-white/20 to-transparent"></div>
+				<div
+					class="absolute inset-0 bg-linear-to-r from-cyan-500/50 via-black/10 dark:via-white/20 to-transparent"
+				></div>
 			</div>
 		</div>
 
@@ -159,10 +150,14 @@
 			></div>
 
 			<!-- Top Card Header -->
-			<div class="relative z-10 flex items-center justify-between pb-6 mb-8 border-b border-black/10 dark:border-white/10">
+			<div
+				class="relative z-10 flex items-center justify-between pb-6 mb-8 border-b border-black/10 dark:border-white/10"
+			>
 				<div class="flex items-center gap-3">
 					<div class="w-6 h-0.5 bg-cyan-400"></div>
-					<span class="font-mono text-[11px] tracking-[0.25em] text-zinc-500 dark:text-zinc-400 uppercase font-medium">
+					<span
+						class="font-mono text-[11px] tracking-[0.25em] text-zinc-500 dark:text-zinc-400 uppercase font-medium"
+					>
 						ONLINE INQUIRY FORM
 					</span>
 				</div>
@@ -180,7 +175,9 @@
 					<h3 class="text-2xl font-bold tracking-tight text-[#1D1D1F] dark:text-white mb-3">
 						{c.value.successTitle}
 					</h3>
-					<p class="text-zinc-600 dark:text-zinc-300 max-w-md text-sm leading-relaxed mb-8 font-normal">
+					<p
+						class="text-zinc-600 dark:text-zinc-300 max-w-md text-sm leading-relaxed mb-8 font-normal"
+					>
 						{c.value.successBody}
 					</p>
 					<button
@@ -210,10 +207,16 @@
 					<div class="grid gap-8 sm:grid-cols-2">
 						<div class="space-y-2">
 							<div class="flex items-center justify-between">
-								<label for="c-name" class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium">
+								<label
+									for="c-name"
+									class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium"
+								>
 									{c.value.labels.name}
 								</label>
-								<span class="font-mono text-[10px] text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-semibold">Required</span>
+								<span
+									class="font-mono text-[10px] text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-semibold"
+									>Required</span
+								>
 							</div>
 							<input
 								type="text"
@@ -228,10 +231,16 @@
 
 						<div class="space-y-2">
 							<div class="flex items-center justify-between">
-								<label for="c-company" class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium">
+								<label
+									for="c-company"
+									class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium"
+								>
 									{c.value.labels.org}
 								</label>
-								<span class="font-mono text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Optional</span>
+								<span
+									class="font-mono text-[10px] text-zinc-500 uppercase tracking-widest font-semibold"
+									>Optional</span
+								>
 							</div>
 							<input
 								type="text"
@@ -248,10 +257,16 @@
 					<div class="grid gap-8 sm:grid-cols-2">
 						<div class="space-y-2">
 							<div class="flex items-center justify-between">
-								<label for="c-email" class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium">
+								<label
+									for="c-email"
+									class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium"
+								>
 									{c.value.labels.email}
 								</label>
-								<span class="font-mono text-[10px] text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-semibold">Required</span>
+								<span
+									class="font-mono text-[10px] text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-semibold"
+									>Required</span
+								>
 							</div>
 							<input
 								type="email"
@@ -266,10 +281,16 @@
 
 						<div class="space-y-2">
 							<div class="flex items-center justify-between">
-								<label for="c-service" class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium">
+								<label
+									for="c-service"
+									class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium"
+								>
 									{c.value.labels.category}
 								</label>
-								<span class="font-mono text-[10px] text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-semibold">Required</span>
+								<span
+									class="font-mono text-[10px] text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-semibold"
+									>Required</span
+								>
 							</div>
 							<select
 								id="c-service"
@@ -278,7 +299,10 @@
 								class="w-full rounded-lg px-4 py-3.5 text-sm bg-zinc-50 dark:bg-[#0a0a0a] text-[#1D1D1F] dark:text-white border border-black/10 dark:border-white/15 focus:outline-none focus:border-cyan-500 dark:focus:border-cyan-400 transition-colors"
 							>
 								{#each serviceTypes as type, i}
-									<option value={type} class="bg-white dark:bg-[#141414] text-[#1D1D1F] dark:text-white">
+									<option
+										value={type}
+										class="bg-white dark:bg-[#141414] text-[#1D1D1F] dark:text-white"
+									>
 										{c.value.serviceTypes[i]}
 									</option>
 								{/each}
@@ -289,10 +313,16 @@
 					<!-- Row 3: Budget & Timeline -->
 					<div class="space-y-2">
 						<div class="flex items-center justify-between">
-							<label for="c-budget" class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium">
+							<label
+								for="c-budget"
+								class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium"
+							>
 								{c.value.labels.budget}
 							</label>
-							<span class="font-mono text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Optional</span>
+							<span
+								class="font-mono text-[10px] text-zinc-500 uppercase tracking-widest font-semibold"
+								>Optional</span
+							>
 						</div>
 						<input
 							type="text"
@@ -307,10 +337,16 @@
 					<!-- Row 4: Message -->
 					<div class="space-y-2">
 						<div class="flex items-center justify-between">
-							<label for="c-message" class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium">
+							<label
+								for="c-message"
+								class="font-mono text-xs tracking-wider text-zinc-600 dark:text-zinc-300 uppercase font-medium"
+							>
 								{c.value.labels.message}
 							</label>
-							<span class="font-mono text-[10px] text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-semibold">Required</span>
+							<span
+								class="font-mono text-[10px] text-cyan-600 dark:text-cyan-400 uppercase tracking-widest font-semibold"
+								>Required</span
+							>
 						</div>
 						<textarea
 							id="c-message"
@@ -345,7 +381,9 @@
 								<span>Sending...</span>
 							{:else}
 								<span>Send Inquiry</span>
-								<ArrowRight class="h-4 w-4 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1" />
+								<ArrowRight
+									class="h-4 w-4 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1"
+								/>
 							{/if}
 						</button>
 					</div>
