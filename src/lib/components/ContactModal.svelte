@@ -6,6 +6,7 @@
 	import Send from 'lucide-svelte/icons/send';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import CheckCircle2 from 'lucide-svelte/icons/check-circle-2';
+	import { submitInquiry } from '$lib/contact.js';
 
 	let { isOpen, onClose, onSuccess, initialContext = '' } = $props();
 
@@ -40,33 +41,33 @@
 		e.preventDefault();
 		if (status === 'submitting') return;
 
+		// Honeypot — a real bot fills this; show a fake success and send nothing.
+		if (honeyPot) {
+			status = 'success';
+			setTimeout(handleClose, 1500);
+			return;
+		}
+
 		status = 'submitting';
 		errorMessage = '';
 
-		try {
-			// Uses the runtime-env endpoint so email works once Netlify env vars
-			// are set — no rebuild needed.
-			const res = await fetch('/api/contact', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, email, message: content, _hp: honeyPot })
-			});
-			const data = await res.json().catch(() => ({}));
+		const { ok, error } = await submitInquiry({
+			name,
+			email,
+			message: content,
+			honeyPot
+		});
 
-			if (!res.ok || data.success === false) {
-				throw new Error(data.error || '送信に失敗しました。時間をおいて再送してください。');
-			}
-
+		if (ok) {
 			status = 'success';
 			name = '';
 			email = '';
 			content = '';
 			if (onSuccess) onSuccess();
 			setTimeout(handleClose, 2000);
-		} catch (err) {
+		} else {
 			status = 'error';
-			errorMessage =
-				err instanceof Error ? err.message : '送信に失敗しました。時間をおいて再送してください。';
+			errorMessage = error || '送信に失敗しました。時間をおいて再送してください。';
 			setTimeout(() => {
 				if (status === 'error') status = 'idle';
 			}, 4000);
