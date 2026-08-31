@@ -1,77 +1,18 @@
 <script>
-	import { fade, fly, scale } from 'svelte/transition';
+	import { fade, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	// Direct imports based on existing project pattern
 	import X from 'lucide-svelte/icons/x';
-	import Send from 'lucide-svelte/icons/send';
-	import Loader2 from 'lucide-svelte/icons/loader-2';
-	import CheckCircle2 from 'lucide-svelte/icons/check-circle-2';
-	import { submitInquiry } from '$lib/contact.js';
+	import ContactForm from './ContactForm.svelte';
 
 	let { isOpen, onClose, onSuccess, initialContext = '' } = $props();
 
-	/** @type {'idle' | 'submitting' | 'success' | 'error'} */
-	let status = $state('idle');
-	let errorMessage = $state('');
-	let name = $state('');
-	let email = $state('');
-	let content = $state('');
-	let honeyPot = $state('');
-
-	// Pre-fill the message when opened from a specific service card
-	$effect(() => {
-		if (isOpen) {
-			content = initialContext ? `「${initialContext}」について相談したいです。\n\n` : content;
-		}
-	});
-
 	function handleClose() {
-		if (status === 'submitting') return;
 		onClose();
-		// Reset status after animation plays out if needed, but keeping success state is nice
-		setTimeout(() => {
-			if (status === 'success' || status === 'error') {
-				status = 'idle';
-			}
-		}, 500);
 	}
 
-	/** @param {SubmitEvent} e */
-	async function handleSubmit(e) {
-		e.preventDefault();
-		if (status === 'submitting') return;
-
-		// Honeypot — a real bot fills this; show a fake success and send nothing.
-		if (honeyPot) {
-			status = 'success';
-			setTimeout(handleClose, 1500);
-			return;
-		}
-
-		status = 'submitting';
-		errorMessage = '';
-
-		const { ok, error } = await submitInquiry({
-			name,
-			email,
-			message: content,
-			honeyPot
-		});
-
-		if (ok) {
-			status = 'success';
-			name = '';
-			email = '';
-			content = '';
-			if (onSuccess) onSuccess();
-			setTimeout(handleClose, 2000);
-		} else {
-			status = 'error';
-			errorMessage = error || '送信に失敗しました。時間をおいて再送してください。';
-			setTimeout(() => {
-				if (status === 'error') status = 'idle';
-			}, 4000);
-		}
+	function handleFormSuccess() {
+		if (onSuccess) onSuccess();
+		setTimeout(handleClose, 2200);
 	}
 </script>
 
@@ -92,7 +33,7 @@
 
 		<!-- Modal Content -->
 		<div
-			class="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white p-8 shadow-2xl ring-1 ring-black/10 backdrop-blur-2xl dark:bg-black/60 dark:ring-white/10"
+			class="relative w-full max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-3xl bg-white p-8 shadow-2xl ring-1 ring-black/10 backdrop-blur-2xl dark:bg-[#0f0f0f] dark:ring-white/10"
 			in:scale={{ start: 0.95, duration: 300, easing: cubicOut }}
 			out:scale={{ start: 0.95, duration: 200, easing: cubicOut }}
 		>
@@ -116,115 +57,15 @@
 					</div>
 					<button
 						onclick={handleClose}
+						aria-label="閉じる"
 						class="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white"
 					>
 						<X class="h-5 w-5" />
 					</button>
 				</div>
 
-				{#if status === 'success'}
-					<div class="flex flex-col items-center justify-center py-12 text-center">
-						<div class="mb-4 rounded-full bg-green-100 p-3 text-green-600 dark:bg-green-900/30">
-							<CheckCircle2 class="h-8 w-8" />
-						</div>
-						<h3 class="text-xl font-bold text-gray-900 dark:text-white">送信しました</h3>
-						<p class="mt-2 text-gray-500 dark:text-gray-400">
-							お問い合わせありがとうございます。<br />確認次第、ご連絡いたします。
-						</p>
-					</div>
-				{:else}
-					<form onsubmit={handleSubmit} class="space-y-5">
-						<!-- Honeypot (hidden from humans) -->
-						<div class="hidden" aria-hidden="true">
-							<label for="hp_modal">Do not fill this</label>
-							<input
-								type="text"
-								id="hp_modal"
-								tabindex="-1"
-								autocomplete="off"
-								bind:value={honeyPot}
-							/>
-						</div>
-
-						<div class="space-y-1">
-							<label
-								for="name"
-								class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-								>Name</label
-							>
-							<input
-								type="text"
-								name="name"
-								id="name"
-								required
-								bind:value={name}
-								placeholder="お名前"
-								class="w-full rounded-xl border-0 bg-gray-50 px-4 py-3 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-black dark:bg-black/50 dark:text-white dark:ring-white/10 dark:focus:ring-white"
-							/>
-						</div>
-
-						<div class="space-y-1">
-							<label
-								for="email"
-								class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-								>Email</label
-							>
-							<input
-								type="email"
-								name="email"
-								id="email"
-								required
-								bind:value={email}
-								placeholder="example@andrew.ac.jp"
-								class="w-full rounded-xl border-0 bg-gray-50 px-4 py-3 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-black dark:bg-black/50 dark:text-white dark:ring-white/10 dark:focus:ring-white"
-							/>
-						</div>
-
-						<div class="space-y-1">
-							<label
-								for="content"
-								class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-								>Content</label
-							>
-							<textarea
-								name="content"
-								id="content"
-								rows="4"
-								required
-								bind:value={content}
-								placeholder="お問い合わせ内容をご記入ください"
-								class="w-full resize-none rounded-xl border-0 bg-gray-50 px-4 py-3 text-gray-900 ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-black dark:bg-black/50 dark:text-white dark:ring-white/10 dark:focus:ring-white"
-							></textarea>
-						</div>
-
-						{#if status === 'error'}
-							<p class="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
-						{/if}
-
-						<div class="pt-2">
-							<button
-								type="submit"
-								disabled={status === 'submitting'}
-								class="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-gray-900 to-black py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.02] hover:shadow-cyan-500/20 disabled:opacity-70 disabled:hover:scale-100 dark:from-white dark:to-gray-200 dark:text-black overflow-hidden"
-							>
-								{#if status === 'submitting'}
-									<Loader2 class="h-4 w-4 animate-spin" />
-									<span>送信中...</span>
-								{:else}
-									<span>Send Message</span>
-									<Send class="h-4 w-4 transition-transform group-hover:translate-x-1" />
-								{/if}
-
-								<!-- Button Shine -->
-								<div
-									class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shine"
-								></div>
-							</button>
-						</div>
-					</form>
-				{/if}
+				<ContactForm variant="modal" {initialContext} onSuccess={handleFormSuccess} />
 			</div>
-			<!-- End Content Wrapper -->
 		</div>
 	</div>
 {/if}
