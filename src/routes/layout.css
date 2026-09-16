@@ -198,18 +198,20 @@ body {
 /* NOTE (2026-09): this used to be a rotating-cube effect — rotateY on
    ::view-transition-old/new(root), plus a scale() "zoom" animation on
    ::view-transition-group(root) (and, before that, perspective +
-   preserve-3d + translateZ for real 3D depth). All of those variants —
-   including the flat rotateY-only one — reproducibly corrupted the GPU
-   compositor in real Chrome (production, momotech.club): the page would
-   freeze on a solid-black paint that didn't match the (correct) DOM/CSS
-   underneath, and it stayed broken across further navigations until a
-   hard reload. Computed styles during the black state always showed
-   correct light-mode values — only the paint was wrong. Since even the
-   depth-free rotateY+scale combo still triggered it, the transform-based
-   effect itself (not just the 3D depth) is unsafe here. Replaced with a
-   plain translateX + opacity slide, which is the same class of animation
-   already used safely elsewhere on this site (no rotate, no scale, no
-   pseudo-element group animation).*/
+   preserve-3d + translateZ for real 3D depth).
+   Re-verified 2026-09-16 in a brand-new browser tab that never loaded
+   the perspective/preserve-3d version: the flat rotateY(±90deg) + scale
+   combo alone (no perspective, no preserve-3d, no translateZ) still
+   reproducibly corrupts Chrome's GPU compositor — the page freezes on a
+   solid-black paint while the underlying DOM/computed styles stay
+   correct (confirmed via elementFromPoint + getComputedStyle during the
+   black state). So the bug isn't the 3D depth specifically; animating
+   `transform` (rotate and/or scale) on the View Transition pseudo-
+   elements/group itself is what's unsafe here. Do not reintroduce
+   rotateY/scale on ::view-transition-*(root) without a fresh-tab,
+   multi-navigation + rapid-click + scroll repro pass proving it's clean.
+   Using a plain translateX + opacity slide instead, the same class of
+   animation already used safely elsewhere on this site. */
 
 :root {
 	--cube-dur: 0.5s;
