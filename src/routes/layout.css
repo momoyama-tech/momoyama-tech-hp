@@ -189,34 +189,31 @@ body {
 }
 
 /* ===================================================================
-   Page transition — directional slide + fade (View Transitions API)
-   onNavigate() in +layout.svelte tags <html> with:
-     data-page-transition="cube" | "plain"   (name kept for compat)
-     data-cube-dir="right" | "left"          (nav order decides direction)
+   Page transition — plain crossfade (View Transitions API)
+   onNavigate() in +layout.svelte tags <html> with data-page-transition
+   ="plain" for the Contact modal and prefers-reduced-motion visitors.
+
+   Section-to-section navigation no longer uses the View Transitions API
+   at all — it's handled by CubeOverlay.svelte, a regular DOM panel that
+   hinges in to cover the screen, then swings out to reveal the new page.
    =================================================================== */
 
-/* NOTE (2026-09): this used to be a rotating-cube effect — rotateY on
+/* NOTE (2026-09): a rotating-cube effect used to be built with rotateY on
    ::view-transition-old/new(root), plus a scale() "zoom" animation on
    ::view-transition-group(root) (and, before that, perspective +
-   preserve-3d + translateZ for real 3D depth).
-   Re-verified 2026-09-16 in a brand-new browser tab that never loaded
-   the perspective/preserve-3d version: the flat rotateY(±90deg) + scale
-   combo alone (no perspective, no preserve-3d, no translateZ) still
-   reproducibly corrupts Chrome's GPU compositor — the page freezes on a
-   solid-black paint while the underlying DOM/computed styles stay
-   correct (confirmed via elementFromPoint + getComputedStyle during the
-   black state). So the bug isn't the 3D depth specifically; animating
-   `transform` (rotate and/or scale) on the View Transition pseudo-
-   elements/group itself is what's unsafe here. Do not reintroduce
-   rotateY/scale on ::view-transition-*(root) without a fresh-tab,
-   multi-navigation + rapid-click + scroll repro pass proving it's clean.
-   Using a plain translateX + opacity slide instead, the same class of
-   animation already used safely elsewhere on this site. */
-
-:root {
-	--cube-dur: 0.5s;
-	--cube-ease: cubic-bezier(0.16, 1, 0.3, 1);
-}
+   preserve-3d + translateZ for real 3D depth). Re-verified 2026-09-16 in
+   a brand-new browser tab: even the flat rotateY(±90deg) + scale combo,
+   with no perspective/preserve-3d/translateZ, still reproducibly
+   corrupts Chrome's GPU compositor — the page freezes on a solid-black
+   paint while the underlying DOM/computed styles stay correct (confirmed
+   via elementFromPoint + getComputedStyle during the black state). So
+   the bug isn't 3D depth specifically — animating `transform` (rotate
+   and/or scale) on the View Transition pseudo-elements/group itself is
+   unsafe here. Do not add transform animations back onto
+   ::view-transition-*(root)/::view-transition-group(root) without a
+   fresh-tab, multi-navigation + rapid-click + scroll repro pass proving
+   it's clean. The cube visual now lives entirely in CubeOverlay.svelte,
+   a normal DOM element outside the View Transition tree. */
 
 /* Plain crossfade — Contact modal + reduced-motion fallback */
 html[data-page-transition='plain']::view-transition-old(root) {
@@ -231,70 +228,5 @@ html[data-page-transition='plain']::view-transition-new(root) {
 	}
 	to {
 		opacity: 0;
-	}
-}
-
-@media (prefers-reduced-motion: no-preference) {
-	html[data-page-transition='cube']::view-transition-old(root),
-	html[data-page-transition='cube']::view-transition-new(root) {
-		animation-duration: var(--cube-dur);
-		animation-timing-function: var(--cube-ease);
-		animation-fill-mode: both;
-	}
-
-	/* dir=right : new screen slides in from the right */
-	html[data-page-transition='cube'][data-cube-dir='right']::view-transition-old(root) {
-		animation-name: slide-old-right;
-	}
-	html[data-page-transition='cube'][data-cube-dir='right']::view-transition-new(root) {
-		animation-name: slide-new-right;
-	}
-	/* dir=left : new screen slides in from the left */
-	html[data-page-transition='cube'][data-cube-dir='left']::view-transition-old(root) {
-		animation-name: slide-old-left;
-	}
-	html[data-page-transition='cube'][data-cube-dir='left']::view-transition-new(root) {
-		animation-name: slide-new-left;
-	}
-}
-
-@keyframes slide-old-right {
-	from {
-		transform: translateX(0);
-		opacity: 1;
-	}
-	to {
-		transform: translateX(-6%);
-		opacity: 0;
-	}
-}
-@keyframes slide-new-right {
-	from {
-		transform: translateX(6%);
-		opacity: 0;
-	}
-	to {
-		transform: translateX(0);
-		opacity: 1;
-	}
-}
-@keyframes slide-old-left {
-	from {
-		transform: translateX(0);
-		opacity: 1;
-	}
-	to {
-		transform: translateX(6%);
-		opacity: 0;
-	}
-}
-@keyframes slide-new-left {
-	from {
-		transform: translateX(-6%);
-		opacity: 0;
-	}
-	to {
-		transform: translateX(0);
-		opacity: 1;
 	}
 }
