@@ -12,6 +12,7 @@
 	import Mail from 'lucide-svelte/icons/mail';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import ContactModal from '$lib/components/ContactModal.svelte';
+	import CubeOverlay from '$lib/components/CubeOverlay.svelte';
 	import { spring } from 'svelte/motion';
 	import { flushSync } from 'svelte';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -90,11 +91,17 @@
 
 	let t = $derived(translations[/** @type {'JP'|'EN'} */ (language.current)]);
 
-	// View Transitions API onNavigate handler
+	/** @type {ReturnType<typeof CubeOverlay> | undefined} */
+	let cubeOverlayRef;
+
+	// Page transition handler. Section-to-section navigation gets the cube
+	// overlay (CubeOverlay.svelte — a regular DOM element, safe from the GPU
+	// compositor bug described in layout.css). Contact (shown as a modal)
+	// and reduced-motion visitors get a plain View Transitions crossfade.
 	onNavigate((navigation) => {
 		// Any overlay tied to the persistent layout must close on navigation,
 		// otherwise it lingers on top of the next page. flushSync() forces the
-		// close into the DOM *before* the View Transition snapshots the page.
+		// close into the DOM before the transition captures/swaps the page.
 		const hadOverlay = showContactModal || isMenuOpen;
 		if (hadOverlay) {
 			showContactModal = false;
@@ -102,15 +109,6 @@
 			flushSync();
 		}
 
-		if (!document.startViewTransition) {
-			window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-			return;
-		}
-
-		// Pick the transition style: zoom-out + cube-flip + zoom-in for section
-		// changes, a plain crossfade for Contact (shown as a modal), when an
-		// overlay was just dismissed, and for visitors who asked for reduced motion.
-		const root = document.documentElement;
 		const fromPath = navigation.from?.url.pathname ?? '';
 		const toPath = navigation.to?.url.pathname ?? '';
 		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -118,14 +116,23 @@
 			hadOverlay || fromPath.startsWith('/contact') || toPath.startsWith('/contact');
 
 		if (reduceMotion || involvesContact) {
-			root.dataset.pageTransition = 'plain';
-		} else {
-			root.dataset.pageTransition = 'cube';
-			root.dataset.cubeDir = cubeDirection(fromPath, toPath);
+			if (!document.startViewTransition) {
+				window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+				return;
+			}
+			document.documentElement.dataset.pageTransition = 'plain';
+			return new Promise((resolve) => {
+				document.startViewTransition(async () => {
+					resolve();
+					await navigation.complete;
+					window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+				});
+			});
 		}
 
+		const dir = cubeDirection(fromPath, toPath);
 		return new Promise((resolve) => {
-			document.startViewTransition(async () => {
+			cubeOverlayRef?.play(dir, async () => {
 				resolve();
 				await navigation.complete;
 				window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -684,6 +691,9 @@
 
 <!-- Scan Line Overlay -->
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
+
+<!-- Cube page-transition overlay (see onNavigate above) -->
+<CubeOverlay bind:this={cubeOverlayRef} />
 
 <!-- Contact modal + toast live at the layout root so their fixed overlays
      are not trapped under the page sections' stacking contexts -->
