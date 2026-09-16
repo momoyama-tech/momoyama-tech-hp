@@ -188,45 +188,23 @@ body {
 	transform: scale(0.95);
 }
 
-/* ===================================================================
-   Page transition — plain crossfade (View Transitions API)
-   onNavigate() in +layout.svelte tags <html> with data-page-transition
-   ="plain" for the Contact modal and prefers-reduced-motion visitors.
-
-   Section-to-section navigation no longer uses the View Transitions API
-   at all — it's handled by CubeOverlay.svelte, a regular DOM panel that
-   hinges in to cover the screen, then swings out to reveal the new page.
-   =================================================================== */
-
-/* NOTE (2026-09): a rotating-cube effect used to be built with rotateY on
-   ::view-transition-old/new(root), plus a scale() "zoom" animation on
-   ::view-transition-group(root) (and, before that, perspective +
-   preserve-3d + translateZ for real 3D depth). Re-verified 2026-09-16 in
-   a brand-new browser tab: even the flat rotateY(±90deg) + scale combo,
-   with no perspective/preserve-3d/translateZ, still reproducibly
-   corrupts Chrome's GPU compositor — the page freezes on a solid-black
-   paint while the underlying DOM/computed styles stay correct (confirmed
-   via elementFromPoint + getComputedStyle during the black state). So
-   the bug isn't 3D depth specifically — animating `transform` (rotate
-   and/or scale) on the View Transition pseudo-elements/group itself is
-   unsafe here. Do not add transform animations back onto
-   ::view-transition-*(root)/::view-transition-group(root) without a
-   fresh-tab, multi-navigation + rapid-click + scroll repro pass proving
-   it's clean. The cube visual now lives entirely in CubeOverlay.svelte,
-   a normal DOM element outside the View Transition tree. */
-
-/* Plain crossfade — Contact modal + reduced-motion fallback */
-html[data-page-transition='plain']::view-transition-old(root) {
-	animation: vt-plain-fade 0.24s ease both;
-}
-html[data-page-transition='plain']::view-transition-new(root) {
-	animation: vt-plain-fade 0.28s ease reverse both;
-}
-@keyframes vt-plain-fade {
-	from {
-		opacity: 1;
-	}
-	to {
-		opacity: 0;
-	}
-}
+/* NOTE (2026-09): this site used to animate page transitions with the
+   View Transitions API — first a rotating-cube effect (perspective +
+   preserve-3d + translateZ + rotateY on the ::view-transition-*(root)
+   pseudo-elements), then a flatter rotateY+scale version, then a
+   translateX slide, then a rotateY "panel" built from a regular DOM
+   element instead of VT pseudo-elements (CubeOverlay.svelte). All of
+   these were red herrings: extensive testing showed the actual cause was
+   Chrome's GPU compositor getting corrupted by SvelteKit's client-side
+   navigation itself — repeated navigations (as few as 1-2 in some real
+   browsers) could freeze the page on a solid-black paint with correct
+   DOM/CSS underneath, independent of any transition/animation code (it
+   reproduced with transitions fully disabled and backdrop-filter removed
+   sitewide). The fix was structural, not visual: <body data-sveltekit-reload>
+   in app.html now forces every section navigation to be a full page
+   reload instead of a SPA transition, so there's no accumulating
+   compositor state to corrupt. There is no page-transition CSS here
+   anymore as a result. Don't reintroduce a View-Transitions-based or
+   DOM-panel-based page transition without re-confirming this GPU bug is
+   actually gone — a single clean test isn't enough; it needed very few
+   navigations to trigger on real hardware. */

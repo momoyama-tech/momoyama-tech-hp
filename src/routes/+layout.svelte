@@ -12,7 +12,6 @@
 	import Mail from 'lucide-svelte/icons/mail';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import ContactModal from '$lib/components/ContactModal.svelte';
-	import CubeOverlay from '$lib/components/CubeOverlay.svelte';
 	import { spring } from 'svelte/motion';
 	import { flushSync } from 'svelte';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -68,76 +67,24 @@
 	import { language } from '$lib/stores/language.svelte.js';
 	import { translations } from '$lib/i18n/translations.js';
 
-	// Order of the main sections in the nav — decides which way the cube spins
-	const NAV_ORDER = ['/home', '/services', '/works', '/projects', '/schedule', '/contact'];
-
-	/** @param {string} pathname */
-	function sectionIndex(pathname) {
-		return NAV_ORDER.indexOf('/' + (pathname.split('/')[1] || ''));
-	}
-
-	/**
-	 * Spin right when moving further down the nav, left when moving back up.
-	 * Unknown routes fall back to right.
-	 * @param {string} fromPath
-	 * @param {string} toPath
-	 */
-	function cubeDirection(fromPath, toPath) {
-		const a = sectionIndex(fromPath);
-		const b = sectionIndex(toPath);
-		if (a === -1 || b === -1 || a === b) return 'right';
-		return b > a ? 'right' : 'left';
-	}
-
 	let t = $derived(translations[/** @type {'JP'|'EN'} */ (language.current)]);
 
-	/** @type {ReturnType<typeof CubeOverlay> | undefined} */
-	let cubeOverlayRef;
-
-	// Page transition handler. Section-to-section navigation gets the cube
-	// overlay (CubeOverlay.svelte — a regular DOM element, safe from the GPU
-	// compositor bug described in layout.css). Contact (shown as a modal)
-	// and reduced-motion visitors get a plain View Transitions crossfade.
-	onNavigate((navigation) => {
-		// Any overlay tied to the persistent layout must close on navigation,
-		// otherwise it lingers on top of the next page. flushSync() forces the
-		// close into the DOM before the transition captures/swaps the page.
-		const hadOverlay = showContactModal || isMenuOpen;
-		if (hadOverlay) {
+	// NOTE (2026-09): section-to-section navigation now does a full page
+	// reload (data-sveltekit-reload on <body> in app.html), not a SvelteKit
+	// client-side transition. This was a deliberate trade-off: repeated
+	// client-side navigation was reproducibly corrupting Chrome's GPU
+	// compositor into painting the page solid black (confirmed independent
+	// of any transition/animation code — see layout.css and CubeOverlay.svelte
+	// history). A full reload can't accumulate that corruption since every
+	// navigation gets a fresh render pipeline. The remaining goto() calls
+	// (the /home news-item overlay) stay client-side and still fire
+	// onNavigate, so overlays tied to the layout still need to close first.
+	onNavigate(() => {
+		if (showContactModal || isMenuOpen) {
 			showContactModal = false;
 			isMenuOpen = false;
 			flushSync();
 		}
-
-		const fromPath = navigation.from?.url.pathname ?? '';
-		const toPath = navigation.to?.url.pathname ?? '';
-		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-		const involvesContact =
-			hadOverlay || fromPath.startsWith('/contact') || toPath.startsWith('/contact');
-
-		if (reduceMotion || involvesContact) {
-			if (!document.startViewTransition) {
-				window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-				return;
-			}
-			document.documentElement.dataset.pageTransition = 'plain';
-			return new Promise((resolve) => {
-				document.startViewTransition(async () => {
-					resolve();
-					await navigation.complete;
-					window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-				});
-			});
-		}
-
-		const dir = cubeDirection(fromPath, toPath);
-		return new Promise((resolve) => {
-			cubeOverlayRef?.play(dir, async () => {
-				resolve();
-				await navigation.complete;
-				window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-			});
-		});
 	});
 
 	let navItems = $derived([
@@ -691,9 +638,6 @@
 
 <!-- Scan Line Overlay -->
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
-
-<!-- Cube page-transition overlay (see onNavigate above) -->
-<CubeOverlay bind:this={cubeOverlayRef} />
 
 <!-- Contact modal + toast live at the layout root so their fixed overlays
      are not trapped under the page sections' stacking contexts -->
