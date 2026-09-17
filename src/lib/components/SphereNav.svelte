@@ -69,6 +69,21 @@
 		return points;
 	}
 
+	onMount(() => {
+		// If the browser restores this page from bfcache (pressing Back after
+		// the camera-zoom navigated away), the WebGL render loop and the
+		// "zooming" flag are frozen exactly as they were at the moment of
+		// navigating away — the scene never resumes animating and clicks
+		// stay disabled. A full reload guarantees a clean restart instead of
+		// trying to resurrect mid-animation WebGL/rAF state.
+		/** @param {PageTransitionEvent} e */
+		const handlePageShow = (e) => {
+			if (e.persisted) window.location.reload();
+		};
+		window.addEventListener('pageshow', handlePageShow);
+		return () => window.removeEventListener('pageshow', handlePageShow);
+	});
+
 	onMount(async () => {
 		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		const canvasTest = document.createElement('canvas');
@@ -159,14 +174,36 @@
 			vec: new THREE.Vector3(nodePositions[i].x, nodePositions[i].y, nodePositions[i].z)
 		}));
 
+		// Each destination is a small flat "screen" facing outward from the
+		// sphere, not just a dot — so flying up to it and having it fill the
+		// frame reads as "that point was a screen", not just a camera
+		// stopping near an abstract marker.
+		const panelGeo = new THREE.PlaneGeometry(0.45, 0.3);
+		const panelEdges = new THREE.EdgesGeometry(panelGeo);
 		nodes.forEach(({ vec }) => {
+			const outward = vec.clone().normalize();
 			/** @type {any} */
-			const dot = new THREE.Mesh(
-				new THREE.SphereGeometry(0.06, 12, 12),
-				new THREE.MeshBasicMaterial({ color: 0xffffff })
+			const panel = new THREE.Mesh(
+				panelGeo,
+				new THREE.MeshBasicMaterial({
+					color: 0x05070a,
+					side: THREE.DoubleSide,
+					transparent: true,
+					opacity: 0.92
+				})
 			);
-			dot.position.copy(vec);
-			group.add(dot);
+			panel.position.copy(vec);
+			panel.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), outward);
+			group.add(panel);
+
+			/** @type {any} */
+			const border = new THREE.LineSegments(
+				panelEdges,
+				new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })
+			);
+			border.position.copy(panel.position);
+			border.quaternion.copy(panel.quaternion);
+			group.add(border);
 		});
 
 		function updateLabels() {
@@ -226,7 +263,10 @@
 			}
 			const dir = target.vec.clone().applyQuaternion(group.quaternion).normalize();
 			const startPos = camera.position.clone();
-			const endPos = dir.clone().multiplyScalar(radius * 0.85);
+			// Approach from outside, stopping just short of the panel's
+			// outward face so it fills almost the whole frame — not diving
+			// through the sphere's center.
+			const endPos = dir.clone().multiplyScalar(radius + 0.32);
 			const start = performance.now();
 			const duration = 1100;
 			/** @param {number} now */
