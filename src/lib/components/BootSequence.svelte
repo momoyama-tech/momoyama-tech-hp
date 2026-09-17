@@ -5,7 +5,14 @@
 	// CSS/JS-timed text reveal, no View Transitions, no dependency on the
 	// navigation lifecycle — plays exactly once regardless of which page
 	// the visitor lands on first, then fades away for good this session.
-	import { onMount } from 'svelte';
+	//
+	// The "cursor" is a fake element, not the real OS pointer — no web API
+	// can move that. The illusion is sold by hiding the real cursor
+	// (cursor: none) over the overlay and starting the fake one from the
+	// visitor's actual last known pointer position (tracked via
+	// pointermove), so it looks like their own cursor gets taken over
+	// rather than a random dot appearing.
+	import { onMount, tick } from 'svelte';
 
 	const LINES = [
 		'MOMOYAMA TECH SYSTEM v2.0',
@@ -16,11 +23,41 @@
 		'Ready.'
 	];
 
+	const COLS = 16;
+	const ROWS = 9;
+
+	const diamonds = Array.from({ length: COLS * ROWS }, (_, i) => {
+		const col = i % COLS;
+		const row = Math.floor(i / COLS);
+		const dx = col - (COLS - 1) / 2;
+		const dy = row - (ROWS - 1) / 2;
+		const dist = Math.sqrt(dx * dx + dy * dy);
+		return { col, row, dist };
+	});
+	const maxDist = Math.max(...diamonds.map((d) => d.dist));
+
 	let active = $state(false);
 	let revealedLines = $state(/** @type {string[]} */ ([]));
 	let showPrompt = $state(false);
+	let cursorVisible = $state(false);
+	let cursorTravel = $state(false);
 	let cursorClicking = $state(false);
-	let fadingOut = $state(false);
+	let textFadingOut = $state(false);
+	let diamondsGone = $state(false);
+
+	let cursorX = $state(0);
+	let cursorY = $state(0);
+
+	/** @type {HTMLDivElement | undefined} */
+	let enterEl = $state();
+
+	let lastPointerX = 0;
+	let lastPointerY = 0;
+	/** @param {PointerEvent} e */
+	function trackPointer(e) {
+		lastPointerX = e.clientX;
+		lastPointerY = e.clientY;
+	}
 
 	/** @param {number} ms */
 	function sleep(ms) {
@@ -46,11 +83,29 @@
 		}
 		await sleep(200);
 		showPrompt = true;
-		await sleep(650);
+		await sleep(500);
+
+		// Start the fake cursor exactly where the visitor's real cursor last
+		// was, then animate it over to the ENTER prompt.
+		cursorX = lastPointerX || window.innerWidth / 2;
+		cursorY = lastPointerY || window.innerHeight / 2;
+		cursorVisible = true;
+		await tick();
+		const target = enterEl?.getBoundingClientRect();
+		await sleep(30);
+		cursorTravel = true;
+		if (target) {
+			cursorX = target.left + 8;
+			cursorY = target.top + target.height / 2;
+		}
+		await sleep(750);
 		cursorClicking = true;
-		await sleep(280);
-		fadingOut = true;
-		await sleep(450);
+		await sleep(260);
+
+		textFadingOut = true;
+		await sleep(220);
+		diamondsGone = true;
+		await sleep(600);
 		active = false;
 		try {
 			sessionStorage.setItem('momotech-booted', '1');
@@ -69,14 +124,29 @@
 		}
 		if (reduceMotion || alreadyBooted) return;
 
+		window.addEventListener('pointermove', trackPointer);
 		active = true;
-		playSequence();
+		playSequence().finally(() => {
+			window.removeEventListener('pointermove', trackPointer);
+		});
+
+		return () => window.removeEventListener('pointermove', trackPointer);
 	});
 </script>
 
 {#if active}
-	<div class="boot-wrap" class:fading={fadingOut} aria-hidden="true">
-		<div class="boot-panel">
+	<div class="boot-wrap" aria-hidden="true">
+		<div class="boot-diamond-grid" style="--cols: {COLS}; --rows: {ROWS};">
+			{#each diamonds as d (d.row + '-' + d.col)}
+				<div
+					class="boot-diamond"
+					class:gone={diamondsGone}
+					style="transition-delay: {diamondsGone ? (d.dist / maxDist) * 380 : 0}ms;"
+				></div>
+			{/each}
+		</div>
+
+		<div class="boot-panel" class:fading={textFadingOut}>
 			<div class="boot-terminal">
 				{#each revealedLines as line, i (i)}
 					<div class="boot-line">
@@ -88,13 +158,20 @@
 			</div>
 
 			{#if showPrompt}
-				<div class="boot-enter">
+				<div class="boot-enter" bind:this={enterEl}>
 					<span class="boot-prompt-char">&gt;</span> ENTER を押して開始
 				</div>
 			{/if}
-
-			<div class="boot-cursor" class:click={cursorClicking}></div>
 		</div>
+
+		{#if cursorVisible}
+			<div
+				class="boot-cursor"
+				class:travel={cursorTravel}
+				class:click={cursorClicking}
+				style="left: {cursorX}px; top: {cursorY}px;"
+			></div>
+		{/if}
 	</div>
 {/if}
 
@@ -103,21 +180,42 @@
 		position: fixed;
 		inset: 0;
 		z-index: 20000;
-		background: #0a0a0a;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		transition: opacity 0.45s ease;
+		cursor: none;
 	}
 
-	.boot-wrap.fading {
+	.boot-diamond-grid {
+		position: absolute;
+		inset: -10%;
+		width: 120%;
+		height: 120%;
+		display: grid;
+		grid-template-columns: repeat(var(--cols), 1fr);
+		grid-template-rows: repeat(var(--rows), 1fr);
+	}
+
+	.boot-diamond {
+		background: linear-gradient(135deg, #0a0a0a 0%, #111827 55%, #0a0a0a 100%);
+		transform: scale(1.55) rotate(45deg);
+		transition: transform 0.45s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.45s ease;
+	}
+
+	.boot-diamond.gone {
+		transform: scale(0) rotate(45deg);
 		opacity: 0;
 	}
 
 	.boot-panel {
-		position: relative;
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
 		width: min(520px, 88vw);
 		height: 260px;
+		transition: opacity 0.2s ease;
+	}
+
+	.boot-panel.fading {
+		opacity: 0;
 	}
 
 	.boot-terminal {
@@ -181,43 +279,28 @@
 	}
 
 	.boot-cursor {
-		position: absolute;
+		position: fixed;
 		width: 14px;
 		height: 14px;
 		border: 2px solid #67e8f9;
 		border-radius: 50%;
 		box-shadow: 0 0 12px rgba(6, 182, 212, 0.7);
-		left: 50%;
-		top: 60%;
 		transform: translate(-50%, -50%) scale(1);
-		opacity: 0;
-		animation: boot-cursor-travel 0.9s cubic-bezier(0.65, 0, 0.35, 1) 0.85s forwards;
+		pointer-events: none;
+	}
+
+	.boot-cursor.travel {
+		transition: left 0.75s cubic-bezier(0.65, 0, 0.35, 1), top 0.75s cubic-bezier(0.65, 0, 0.35, 1);
 	}
 
 	.boot-cursor.click {
-		animation: none;
-		left: 88px;
-		top: 218px;
-		opacity: 1;
 		transform: translate(-50%, -50%) scale(0.6);
 		transition: transform 0.15s ease;
 	}
 
-	@keyframes boot-cursor-travel {
-		0% {
-			left: 50%;
-			top: 60%;
-			opacity: 0;
-			transform: translate(-50%, -50%) scale(1);
-		}
-		15% {
-			opacity: 1;
-		}
-		100% {
-			left: 88px;
-			top: 218px;
-			opacity: 1;
-			transform: translate(-50%, -50%) scale(1);
+	@media (prefers-reduced-motion: reduce) {
+		.boot-wrap {
+			display: none;
 		}
 	}
 </style>
