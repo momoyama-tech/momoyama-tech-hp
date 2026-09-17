@@ -65,15 +65,10 @@
 	});
 
 	import { onNavigate } from '$app/navigation';
-	import { page } from '$app/state';
 	import { language } from '$lib/stores/language.svelte.js';
 	import { translations } from '$lib/i18n/translations.js';
 
 	let t = $derived(translations[/** @type {'JP'|'EN'} */ (language.current)]);
-
-	// The 3D sphere "start screen" is a standalone, full-viewport experience
-	// with no site chrome — header and footer only render on every other page.
-	let isStartScreen = $derived(page.url.pathname === '/home');
 
 	// NOTE (2026-09): section-to-section navigation now does a full page
 	// reload (data-sveltekit-reload on <body> in app.html), not a SvelteKit
@@ -189,7 +184,6 @@
 
 <svelte:window onscroll={handleScroll} />
 
-{#if !isStartScreen}
 <!-- Navigation -->
 <nav
 	class="fixed left-0 right-0 top-0 z-[10001] transition-all duration-300 border-b border-[rgba(0,0,0,0.05)] {scrolled
@@ -465,19 +459,13 @@
 		</div>
 	{/if}
 </nav>
-{/if}
 
 <!-- Page content — the pseudo-cube flip is driven by the View Transitions API
      (see onNavigate above and the ::view-transition rules in layout.css) -->
-<div
-	class="relative w-full flex-1 overflow-x-hidden {isStartScreen
-		? ''
-		: 'min-h-[calc(100vh-4rem)]'}"
->
+<div class="relative w-full flex-1 min-h-[calc(100vh-4rem)] overflow-x-hidden">
 	{@render children()}
 </div>
 
-{#if !isStartScreen}
 <!-- Footer -->
 <footer class="bg-gray-50 py-16 dark:bg-gray-950 border-t border-zinc-200/80 dark:border-white/5 relative z-20">
 	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -648,7 +636,6 @@
 		</div>
 	</div>
 </footer>
-{/if}
 
 <!-- Scan Line Overlay -->
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>

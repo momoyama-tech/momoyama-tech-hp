@@ -16,46 +16,23 @@
 	// to ordinary DOM elements, never to a View Transition pseudo-element —
 	// don't move this onto ::view-transition-*(root) without re-verifying
 	// the GPU compositor bug documented in layout.css is actually gone.
-	//
-	// SphereNav's camera zoom already acts as the transition into a
-	// destination page — playing this wipe on top of that would double up
-	// two different "arriving" effects. SphereNav sets a one-shot
-	// sessionStorage flag right before it navigates; if present here, skip
-	// the wipe entirely so the zoom just lands on the real content.
-	import { onMount } from 'svelte';
-
-	let active = $state(true);
-
-	onMount(() => {
-		try {
-			if (sessionStorage.getItem('skip-melt-reveal') === '1') {
-				sessionStorage.removeItem('skip-melt-reveal');
-				active = false;
-			}
-		} catch {
-			// ignore (private browsing / storage disabled) — falls back to
-			// always playing the wipe, which is harmless
-		}
-	});
 </script>
 
-{#if active}
-	<svg width="0" height="0" style="position: absolute" aria-hidden="true">
-		<defs>
-			<filter id="melt-distort" x="-20%" y="-100%" width="140%" height="300%">
-				<feTurbulence type="fractalNoise" baseFrequency="0.012 0.06" numOctaves="2" seed="3" result="noise">
-					<animate attributeName="seed" values="1;30;1" dur="0.6s" repeatCount="2" fill="freeze" />
-				</feTurbulence>
-				<feDisplacementMap in="SourceGraphic" in2="noise" scale="55" xChannelSelector="R" yChannelSelector="G" />
-			</filter>
-		</defs>
-	</svg>
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+	<defs>
+		<filter id="melt-distort" x="-20%" y="-100%" width="140%" height="300%">
+			<feTurbulence type="fractalNoise" baseFrequency="0.012 0.06" numOctaves="2" seed="3" result="noise">
+				<animate attributeName="seed" values="1;30;1" dur="0.6s" repeatCount="2" fill="freeze" />
+			</feTurbulence>
+			<feDisplacementMap in="SourceGraphic" in2="noise" scale="55" xChannelSelector="R" yChannelSelector="G" />
+		</filter>
+	</defs>
+</svg>
 
-	<div class="melt-reveal" aria-hidden="true">
-		<div class="melt-panel"></div>
-		<div class="melt-bar"></div>
-	</div>
-{/if}
+<div class="melt-reveal" aria-hidden="true">
+	<div class="melt-panel"></div>
+	<div class="melt-bar"></div>
+</div>
 
 <style>
 	@property --edge {
