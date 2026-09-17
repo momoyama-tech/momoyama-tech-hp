@@ -101,8 +101,13 @@
 		const height = stageEl.clientHeight;
 
 		scene = new THREE.Scene();
-		camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100);
-		camera.position.set(0, 0, 9);
+		// Near plane kept very small (not the usual 0.1) so the camera can
+		// push all the way into a dot without its geometry being clipped —
+		// the zoom-in ends with the camera literally inside the dot's
+		// sphere, not just close to it.
+		camera = new THREE.PerspectiveCamera(50, width / height, 0.01, 100);
+		const restPos = new THREE.Vector3(0, 0, 9);
+		camera.position.copy(restPos);
 
 		renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 		renderer.setSize(width, height);
@@ -174,36 +179,20 @@
 			vec: new THREE.Vector3(nodePositions[i].x, nodePositions[i].y, nodePositions[i].z)
 		}));
 
-		// Each destination is a small flat "screen" facing outward from the
-		// sphere, not just a dot — so flying up to it and having it fill the
-		// frame reads as "that point was a screen", not just a camera
-		// stopping near an abstract marker.
-		const panelGeo = new THREE.PlaneGeometry(0.45, 0.3);
-		const panelEdges = new THREE.EdgesGeometry(panelGeo);
+		// Destinations are plain white dots, same as the rest of the
+		// sphere's surface — nothing marks them as "screens" ahead of time.
+		// The reveal comes entirely from the camera closing in until it
+		// ends up INSIDE the dot (see zoomToCard's endPos), at which point
+		// the dot's own (double-sided, so visible from inside too) surface
+		// fills the whole frame with white — it feels like the dot WAS the
+		// screen rather than a panel that was sitting there the whole time.
+		const dotGeo = new THREE.SphereGeometry(0.07, 12, 12);
+		const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
 		nodes.forEach(({ vec }) => {
-			const outward = vec.clone().normalize();
 			/** @type {any} */
-			const panel = new THREE.Mesh(
-				panelGeo,
-				new THREE.MeshBasicMaterial({
-					color: 0x05070a,
-					side: THREE.DoubleSide,
-					transparent: true,
-					opacity: 0.92
-				})
-			);
-			panel.position.copy(vec);
-			panel.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), outward);
-			group.add(panel);
-
-			/** @type {any} */
-			const border = new THREE.LineSegments(
-				panelEdges,
-				new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })
-			);
-			border.position.copy(panel.position);
-			border.quaternion.copy(panel.quaternion);
-			group.add(border);
+			const dot = new THREE.Mesh(dotGeo, dotMat);
+			dot.position.copy(vec);
+			group.add(dot);
 		});
 
 		function updateLabels() {
@@ -245,6 +234,13 @@
 			// of playing a second reveal effect on top.
 			try {
 				sessionStorage.setItem('skip-melt-reveal', '1');
+				// Remember which node we dove into so that IF/WHEN the visitor
+				// comes back to this sphere page, it can start already zoomed
+				// into that same dot and animate back OUT — the mirror image
+				// of this zoom-in. Left untouched by the destination page;
+				// only SphereNav itself reads and clears it, once it's done
+				// using it (see the zoom-out block below).
+				sessionStorage.setItem('sphere-return-from', href);
 			} catch {
 				// ignore (private browsing / storage disabled) — worst case the
 				// wipe plays once more than intended, not a functional problem
@@ -263,12 +259,13 @@
 			}
 			const dir = target.vec.clone().applyQuaternion(group.quaternion).normalize();
 			const startPos = camera.position.clone();
-			// Approach from outside, stopping just short of the panel's
-			// outward face so it fills almost the whole frame — not diving
-			// through the sphere's center.
-			const endPos = dir.clone().multiplyScalar(radius + 0.32);
+			// Push all the way past the dot's near face and stop at its
+			// center — with the dot's material set to DoubleSide, ending up
+			// inside it means its surface fills the entire frame with white
+			// right before navigating, instead of just sitting close to it.
+			const endPos = dir.clone().multiplyScalar(radius);
 			const start = performance.now();
-			const duration = 1100;
+			const duration = 1200;
 			/** @param {number} now */
 			function step(now) {
 				const p = Math.min(1, (now - start) / duration);
@@ -284,6 +281,46 @@
 			}
 			requestAnimationFrame(step);
 		};
+
+		// Mirror image of the zoom-in: if the visitor is arriving here
+		// having just dove into a node (tracked via sessionStorage, since a
+		// full reload loses all JS state), start the camera already inside
+		// that same dot and animate OUT to the resting position instead of
+		// idling at rest from the first frame.
+		/** @type {string | null} */
+		let returnHref = null;
+		try {
+			returnHref = sessionStorage.getItem('sphere-return-from');
+		} catch {
+			// ignore
+		}
+		const returnNode = returnHref ? nodes.find((n) => n.card.href === returnHref) : undefined;
+		if (returnNode) {
+			const returnVec = returnNode.vec;
+			zooming = true;
+			camera.position.copy(returnVec);
+			camera.lookAt(0, 0, 0);
+			const zoomOutStart = performance.now();
+			const zoomOutDuration = 900;
+			/** @param {number} now */
+			function zoomOutStep(now) {
+				const p = Math.min(1, (now - zoomOutStart) / zoomOutDuration);
+				const eased = p * p * (3 - 2 * p);
+				camera.position.lerpVectors(returnVec, restPos, eased);
+				camera.lookAt(0, 0, 0);
+				if (p < 1) {
+					requestAnimationFrame(zoomOutStep);
+				} else {
+					zooming = false;
+					try {
+						sessionStorage.removeItem('sphere-return-from');
+					} catch {
+						// ignore
+					}
+				}
+			}
+			requestAnimationFrame(zoomOutStep);
+		}
 
 		function handleResize() {
 			if (!stageEl) return;
