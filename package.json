@@ -59,6 +59,7 @@
 		"lucide-svelte": "^0.563.0",
 		"marked": "^17.0.1",
 		"notion-to-md": "^3.1.9",
-		"resend": "^6.9.1"
+		"resend": "^6.9.1",
+		"three": "^0.186.0"
 	}
 }

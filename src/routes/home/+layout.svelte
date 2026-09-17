@@ -16,6 +16,7 @@
 	import FolderGit2 from 'lucide-svelte/icons/folder-git-2';
 	import MailIcon from 'lucide-svelte/icons/mail';
 	import { spotlight } from '$lib/actions/spotlight.js';
+	import SphereNav from '$lib/components/SphereNav.svelte';
 
 	const portalCards = [
 		{
@@ -524,6 +525,7 @@
 			</h2>
 		</div>
 
+		<SphereNav cards={portalCards}>
 		<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 			{#each portalCards as card (card.href)}
 				{@const Icon = card.icon}
@@ -579,6 +581,7 @@
 				</a>
 			{/each}
 		</div>
+		</SphereNav>
 	</div>
 </div>
 
