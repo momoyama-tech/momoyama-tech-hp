@@ -9,14 +9,18 @@
 	// The "cursor" is a fake element, not the real OS pointer — no web API
 	// can move that (verified against ichimaru103.com, which does the
 	// identical trick: a real `cursor: url(...)` image plus a hidden fake
-	// cursor element it animates during automated moments). The real
-	// cursor stays visible and usable during the typing/reading phase;
-	// only once the fake cursor appears (right as it starts traveling to
-	// the ENTER prompt) do we hide the real one (cursor: none), starting
-	// the fake one from the visitor's actual last known pointer position
-	// (tracked via pointermove) so the handoff reads as "their own cursor
-	// gets taken over" rather than the cursor vanishing early or a random
-	// dot appearing out of nowhere.
+	// cursor element it animates during automated moments). There's also no
+	// way to read the visitor's actual OS pointer color/style from the
+	// page, so the fake cursor's look (dark fill, light outline) is just a
+	// best-effort default, not a real match. The real cursor stays visible
+	// and usable during the typing/reading phase; only once the fake
+	// cursor appears (right as it starts traveling to the ENTER prompt) do
+	// we hide the real one (cursor: none), starting the fake one from the
+	// visitor's actual last known pointer position (tracked via
+	// pointermove). After it "clicks", it travels back to that same
+	// position before handing off to the real cursor again — otherwise the
+	// real cursor would visibly teleport from the ENTER prompt to wherever
+	// it physically is the instant the fake one disappears.
 	import { onMount, tick } from 'svelte';
 	import { boot } from '$lib/stores/boot.svelte.js';
 
@@ -107,6 +111,16 @@
 		await sleep(750);
 		cursorClicking = true;
 		await sleep(260);
+		cursorClicking = false;
+
+		// Travel back to the visitor's actual pointer position before handing
+		// control back to the real cursor — otherwise it "teleports" from the
+		// ENTER prompt to wherever the real mouse physically is the instant
+		// the fake cursor disappears.
+		cursorX = lastPointerX || window.innerWidth / 2;
+		cursorY = lastPointerY || window.innerHeight / 2;
+		await sleep(550);
+		cursorVisible = false;
 
 		textFadingOut = true;
 		await sleep(220);
@@ -186,8 +200,8 @@
 			>
 				<path
 					d="M4 2 L4 19 L8.3 15.2 L11 21.2 L13.6 20 L11 14 L18 14 Z"
-					fill="#ffffff"
-					stroke="#0a0a0a"
+					fill="#111111"
+					stroke="#ffffff"
 					stroke-width="1.3"
 					stroke-linejoin="round"
 				/>
