@@ -1,7 +1,7 @@
 <script>
 	import { language } from '$lib/stores/language.svelte.js';
 	import { translations } from '$lib/i18n/translations.js';
-	import { onMount, onDestroy, untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { fly, fade, scale } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
 	import { cubicOut, quintOut } from 'svelte/easing';
@@ -16,6 +16,7 @@
 	import FolderGit2 from 'lucide-svelte/icons/folder-git-2';
 	import MailIcon from 'lucide-svelte/icons/mail';
 	import { spotlight } from '$lib/actions/spotlight.js';
+	import { boot } from '$lib/stores/boot.svelte.js';
 
 	const portalCards = [
 		{
@@ -108,8 +109,19 @@
 	/** @type {NodeJS.Timeout} */
 	let blinkInterval;
 
-	onMount(() => {
-		// Start Animation Sequence
+	// Wait for the first-visit boot sequence (if any) to finish before
+	// starting the typing animation — otherwise it plays invisibly
+	// underneath the boot overlay and is wasted (see BootSequence.svelte /
+	// boot.svelte.js).
+	let typingStarted = false;
+	$effect(() => {
+		if (boot.complete && !typingStarted) {
+			typingStarted = true;
+			startTyping();
+		}
+	});
+
+	function startTyping() {
 		const TYPE_SPEED = 35;
 		const TYPE_VARIANCE = 15;
 		const COMMA_PAUSE = 100;
@@ -169,12 +181,7 @@
 		}
 
 		setTimeout(loop, 500);
-
-		return () => {
-			if (typingInterval) clearTimeout(typingInterval);
-			if (blinkInterval) clearInterval(blinkInterval);
-		};
-	});
+	}
 
 	// Cleanup on destroy
 	onDestroy(() => {

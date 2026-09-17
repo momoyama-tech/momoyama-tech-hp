@@ -13,6 +13,7 @@
 	// pointermove), so it looks like their own cursor gets taken over
 	// rather than a random dot appearing.
 	import { onMount, tick } from 'svelte';
+	import { boot } from '$lib/stores/boot.svelte.js';
 
 	const LINES = [
 		'MOMOYAMA TECH SYSTEM v2.0',
@@ -112,6 +113,7 @@
 		} catch {
 			// ignore (private browsing / storage disabled)
 		}
+		boot.markComplete();
 	}
 
 	onMount(() => {
@@ -122,7 +124,10 @@
 		} catch {
 			// treat as already-booted if storage is unavailable
 		}
-		if (reduceMotion || alreadyBooted) return;
+		if (reduceMotion || alreadyBooted) {
+			boot.markComplete();
+			return;
+		}
 
 		window.addEventListener('pointermove', trackPointer);
 		active = true;
@@ -165,12 +170,23 @@
 		</div>
 
 		{#if cursorVisible}
-			<div
+			<svg
 				class="boot-cursor"
 				class:travel={cursorTravel}
 				class:click={cursorClicking}
 				style="left: {cursorX}px; top: {cursorY}px;"
-			></div>
+				viewBox="0 0 24 24"
+				width="22"
+				height="22"
+			>
+				<path
+					d="M4 2 L4 19 L8.3 15.2 L11 21.2 L13.6 20 L11 14 L18 14 Z"
+					fill="#ffffff"
+					stroke="#0a0a0a"
+					stroke-width="1.3"
+					stroke-linejoin="round"
+				/>
+			</svg>
 		{/if}
 	</div>
 {/if}
@@ -280,12 +296,9 @@
 
 	.boot-cursor {
 		position: fixed;
-		width: 14px;
-		height: 14px;
-		border: 2px solid #67e8f9;
-		border-radius: 50%;
-		box-shadow: 0 0 12px rgba(6, 182, 212, 0.7);
-		transform: translate(-50%, -50%) scale(1);
+		transform: translate(-3px, -2px) scale(1);
+		transform-origin: 4px 2px;
+		filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 10px rgba(6, 182, 212, 0.6));
 		pointer-events: none;
 	}
 
@@ -294,7 +307,7 @@
 	}
 
 	.boot-cursor.click {
-		transform: translate(-50%, -50%) scale(0.6);
+		transform: translate(-3px, -2px) scale(0.85);
 		transition: transform 0.15s ease;
 	}
 
