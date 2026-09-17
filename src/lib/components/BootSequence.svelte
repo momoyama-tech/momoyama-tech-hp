@@ -6,22 +6,18 @@
 	// navigation lifecycle — plays exactly once regardless of which page
 	// the visitor lands on first, then fades away for good this session.
 	//
-	// The "cursor" is a fake element, not the real OS pointer — no web API
-	// can move that (verified against ichimaru103.com, which does the
-	// identical trick: a real `cursor: url(...)` image plus a hidden fake
-	// cursor element it animates during automated moments). There's also no
-	// way to read the visitor's actual OS pointer color/style from the
-	// page, so the fake cursor's look (dark fill, light outline) is just a
-	// best-effort default, not a real match. The real cursor stays visible
-	// and usable during the typing/reading phase; only once the fake
-	// cursor appears (right as it starts traveling to the ENTER prompt) do
-	// we hide the real one (cursor: none), starting the fake one from the
-	// visitor's actual last known pointer position (tracked via
-	// pointermove). After it "clicks", it travels back to that same
-	// position before handing off to the real cursor again — otherwise the
-	// real cursor would visibly teleport from the ENTER prompt to wherever
-	// it physically is the instant the fake one disappears.
-	import { onMount, tick } from 'svelte';
+	// The "ENTER を押して開始" prompt requires a REAL click, not a faked
+	// cursor animation. An earlier version had a fake cursor auto-travel to
+	// the button (matching ichimaru103.com's technique of a real
+	// `cursor: url(...)` plus a hidden fake cursor it animates), but that
+	// only works if the visitor's actual pointer position is already known
+	// — if their real cursor has never entered the viewport (or is on
+	// another monitor), there's nothing to animate from and it either
+	// teleports from a wrong/default position or starts at (0,0). Requiring
+	// a real click sidesteps that entirely: the click event itself gives an
+	// exact, guaranteed-on-screen position, which is also why the reference
+	// site gates its own "auto" sequences behind an initial click.
+	import { tick } from 'svelte';
 	import { boot } from '$lib/stores/boot.svelte.js';
 
 	const LINES = [
@@ -49,24 +45,21 @@
 	let active = $state(false);
 	let revealedLines = $state(/** @type {string[]} */ ([]));
 	let showPrompt = $state(false);
-	let cursorVisible = $state(false);
-	let cursorTravel = $state(false);
-	let cursorClicking = $state(false);
 	let textFadingOut = $state(false);
 	let diamondsGone = $state(false);
+	let rippleVisible = $state(false);
+	let rippleX = $state(0);
+	let rippleY = $state(0);
 
-	let cursorX = $state(0);
-	let cursorY = $state(0);
+	/** @type {((value?: any) => void) | undefined} */
+	let resolveEnterClick;
 
-	/** @type {HTMLDivElement | undefined} */
-	let enterEl = $state();
-
-	let lastPointerX = 0;
-	let lastPointerY = 0;
-	/** @param {PointerEvent} e */
-	function trackPointer(e) {
-		lastPointerX = e.clientX;
-		lastPointerY = e.clientY;
+	/** @param {MouseEvent} e */
+	function handleEnterClick(e) {
+		rippleX = e.clientX;
+		rippleY = e.clientY;
+		rippleVisible = true;
+		resolveEnterClick?.();
 	}
 
 	/** @param {number} ms */
@@ -93,35 +86,12 @@
 		}
 		await sleep(200);
 		showPrompt = true;
-		await sleep(500);
 
-		// Start the fake cursor exactly where the visitor's real cursor last
-		// was, then animate it over to the ENTER prompt.
-		cursorX = lastPointerX || window.innerWidth / 2;
-		cursorY = lastPointerY || window.innerHeight / 2;
-		cursorVisible = true;
-		await tick();
-		const target = enterEl?.getBoundingClientRect();
-		await sleep(30);
-		cursorTravel = true;
-		if (target) {
-			cursorX = target.left + 8;
-			cursorY = target.top + target.height / 2;
-		}
-		await sleep(750);
-		cursorClicking = true;
-		await sleep(260);
-		cursorClicking = false;
+		await new Promise((resolve) => {
+			resolveEnterClick = resolve;
+		});
 
-		// Travel back to the visitor's actual pointer position before handing
-		// control back to the real cursor — otherwise it "teleports" from the
-		// ENTER prompt to wherever the real mouse physically is the instant
-		// the fake cursor disappears.
-		cursorX = lastPointerX || window.innerWidth / 2;
-		cursorY = lastPointerY || window.innerHeight / 2;
-		await sleep(550);
-		cursorVisible = false;
-
+		await sleep(280);
 		textFadingOut = true;
 		await sleep(220);
 		diamondsGone = true;
@@ -135,7 +105,7 @@
 		boot.markComplete();
 	}
 
-	onMount(() => {
+	$effect(() => {
 		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		let alreadyBooted = true;
 		try {
@@ -148,18 +118,13 @@
 			return;
 		}
 
-		window.addEventListener('pointermove', trackPointer);
 		active = true;
-		playSequence().finally(() => {
-			window.removeEventListener('pointermove', trackPointer);
-		});
-
-		return () => window.removeEventListener('pointermove', trackPointer);
+		tick().then(playSequence);
 	});
 </script>
 
 {#if active}
-	<div class="boot-wrap" class:cursor-hidden={cursorVisible} aria-hidden="true">
+	<div class="boot-wrap" aria-hidden="true">
 		<div class="boot-diamond-grid" style="--cols: {COLS}; --rows: {ROWS};">
 			{#each diamonds as d (d.row + '-' + d.col)}
 				<div
@@ -182,30 +147,14 @@
 			</div>
 
 			{#if showPrompt}
-				<div class="boot-enter" bind:this={enterEl}>
+				<button type="button" class="boot-enter" onclick={handleEnterClick}>
 					<span class="boot-prompt-char">&gt;</span> ENTER を押して開始
-				</div>
+				</button>
 			{/if}
 		</div>
 
-		{#if cursorVisible}
-			<svg
-				class="boot-cursor"
-				class:travel={cursorTravel}
-				class:click={cursorClicking}
-				style="left: {cursorX}px; top: {cursorY}px;"
-				viewBox="0 0 24 24"
-				width="22"
-				height="22"
-			>
-				<path
-					d="M4 2 L4 19 L8.3 15.2 L11 21.2 L13.6 20 L11 14 L18 14 Z"
-					fill="#111111"
-					stroke="#ffffff"
-					stroke-width="1.3"
-					stroke-linejoin="round"
-				/>
-			</svg>
+		{#if rippleVisible}
+			<div class="boot-ripple" style="left: {rippleX}px; top: {rippleY}px;"></div>
 		{/if}
 	</div>
 {/if}
@@ -215,10 +164,6 @@
 		position: fixed;
 		inset: 0;
 		z-index: 20000;
-	}
-
-	.boot-wrap.cursor-hidden {
-		cursor: none;
 	}
 
 	.boot-diamond-grid {
@@ -301,8 +246,17 @@
 		font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
 		font-size: 0.85rem;
 		color: #e5e7eb;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
 		opacity: 0;
 		animation: boot-prompt-in 0.4s ease forwards;
+	}
+
+	.boot-enter:hover,
+	.boot-enter:focus-visible {
+		color: #67e8f9;
 	}
 
 	@keyframes boot-prompt-in {
@@ -316,21 +270,26 @@
 		}
 	}
 
-	.boot-cursor {
+	.boot-ripple {
 		position: fixed;
-		transform: translate(-3px, -2px) scale(1);
-		transform-origin: 4px 2px;
-		filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 10px rgba(6, 182, 212, 0.6));
+		width: 8px;
+		height: 8px;
+		margin: -4px 0 0 -4px;
+		border-radius: 50%;
+		border: 2px solid #67e8f9;
 		pointer-events: none;
+		animation: boot-ripple-out 0.5s ease-out forwards;
 	}
 
-	.boot-cursor.travel {
-		transition: left 0.75s cubic-bezier(0.65, 0, 0.35, 1), top 0.75s cubic-bezier(0.65, 0, 0.35, 1);
-	}
-
-	.boot-cursor.click {
-		transform: translate(-3px, -2px) scale(0.85);
-		transition: transform 0.15s ease;
+	@keyframes boot-ripple-out {
+		from {
+			transform: scale(1);
+			opacity: 1;
+		}
+		to {
+			transform: scale(6);
+			opacity: 0;
+		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
