@@ -13,6 +13,7 @@
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import ContactModal from '$lib/components/ContactModal.svelte';
 	import BootSequence from '$lib/components/BootSequence.svelte';
+	import ScanRevealOverlay from '$lib/components/ScanRevealOverlay.svelte';
 	import { spring } from 'svelte/motion';
 	import { flushSync } from 'svelte';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -642,6 +643,9 @@
 
 <!-- First-visit boot sequence (see BootSequence.svelte) -->
 <BootSequence />
+
+<!-- Per-navigation scan reveal (see ScanRevealOverlay.svelte) -->
+<ScanRevealOverlay />
 
 <!-- Contact modal + toast live at the layout root so their fixed overlays
      are not trapped under the page sections' stacking contexts -->
