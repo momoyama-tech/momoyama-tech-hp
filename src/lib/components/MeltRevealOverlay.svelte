@@ -64,11 +64,18 @@
 		filter: url(#melt-distort);
 		-webkit-mask-image: linear-gradient(
 			to bottom,
-			black 0%,
+			transparent 0%,
+			transparent calc(var(--edge) - 12%),
 			black var(--edge),
-			transparent calc(var(--edge) + 12%)
+			black 100%
 		);
-		mask-image: linear-gradient(to bottom, black 0%, black var(--edge), transparent calc(var(--edge) + 12%));
+		mask-image: linear-gradient(
+			to bottom,
+			transparent 0%,
+			transparent calc(var(--edge) - 12%),
+			black var(--edge),
+			black 100%
+		);
 	}
 
 	.melt-bar {
