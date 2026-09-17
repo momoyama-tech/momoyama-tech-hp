@@ -13,6 +13,7 @@
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import ContactModal from '$lib/components/ContactModal.svelte';
 	import CodeTransition from '$lib/components/CodeTransition.svelte';
+	import BatteryDegradation from '$lib/components/BatteryDegradation.svelte';
 	import { spring } from 'svelte/motion';
 	import { flushSync } from 'svelte';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -642,6 +643,9 @@
 
 <!-- Per-navigation code-scramble transition (see CodeTransition.svelte) -->
 <CodeTransition />
+
+<!-- Real battery level visually degrades the UI (see BatteryDegradation.svelte) -->
+<BatteryDegradation />
 
 <!-- Contact modal + toast live at the layout root so their fixed overlays
      are not trapped under the page sections' stacking contexts -->
