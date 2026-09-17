@@ -7,11 +7,16 @@
 	// the visitor lands on first, then fades away for good this session.
 	//
 	// The "cursor" is a fake element, not the real OS pointer — no web API
-	// can move that. The illusion is sold by hiding the real cursor
-	// (cursor: none) over the overlay and starting the fake one from the
-	// visitor's actual last known pointer position (tracked via
-	// pointermove), so it looks like their own cursor gets taken over
-	// rather than a random dot appearing.
+	// can move that (verified against ichimaru103.com, which does the
+	// identical trick: a real `cursor: url(...)` image plus a hidden fake
+	// cursor element it animates during automated moments). The real
+	// cursor stays visible and usable during the typing/reading phase;
+	// only once the fake cursor appears (right as it starts traveling to
+	// the ENTER prompt) do we hide the real one (cursor: none), starting
+	// the fake one from the visitor's actual last known pointer position
+	// (tracked via pointermove) so the handoff reads as "their own cursor
+	// gets taken over" rather than the cursor vanishing early or a random
+	// dot appearing out of nowhere.
 	import { onMount, tick } from 'svelte';
 	import { boot } from '$lib/stores/boot.svelte.js';
 
@@ -140,7 +145,7 @@
 </script>
 
 {#if active}
-	<div class="boot-wrap" aria-hidden="true">
+	<div class="boot-wrap" class:cursor-hidden={cursorVisible} aria-hidden="true">
 		<div class="boot-diamond-grid" style="--cols: {COLS}; --rows: {ROWS};">
 			{#each diamonds as d (d.row + '-' + d.col)}
 				<div
@@ -196,6 +201,9 @@
 		position: fixed;
 		inset: 0;
 		z-index: 20000;
+	}
+
+	.boot-wrap.cursor-hidden {
 		cursor: none;
 	}
 
