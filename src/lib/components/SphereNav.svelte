@@ -1,16 +1,16 @@
 <script>
 	// 3D navigation hub: a rotating WebGL particle sphere with each portal
 	// card's destination placed as a glowing point on its surface. Clicking
-	// a point expands that point's own label (an ordinary HTML button,
-	// positioned each frame from its 3D projection) to fill the viewport —
-	// not a camera flythrough followed by a separate page swap. The label
-	// growing to fullscreen IS the transition; navigation only fires once
-	// it's already covering the screen, so arriving at the destination
-	// feels like "that screen was already there" rather than "zoom, then
-	// switch". The 3D scene is a showcase/entry point only, never a
-	// replacement for the destination pages themselves, which stay plain,
-	// fast, server-rendered SvelteKit routes (SEO + accessibility + mobile
-	// perf all depend on that).
+	// a point makes the CAMERA physically travel toward it in 3D space
+	// (not an HTML label scaling up to fill the screen — that read as "the
+	// screen floating up" rather than genuine depth). Navigation only
+	// fires once the camera has arrived, with the destination page's own
+	// entrance wipe skipped (see navigateTo), so the dolly-in is the whole
+	// transition and the destination just seems to already be there. The
+	// 3D scene is a showcase/entry point only, never a replacement for the
+	// destination pages themselves, which stay plain, fast, server-rendered
+	// SvelteKit routes (SEO + accessibility + mobile perf all depend on
+	// that).
 	//
 	// Falls back to rendering `children` (the caller's normal card grid)
 	// when WebGL is unavailable or prefers-reduced-motion is set — this
@@ -48,9 +48,6 @@
 	/** @type {((card: SphereCard) => void) | undefined} */
 	let zoomToCard;
 	let zooming = false;
-	/** @type {string | null} */
-	let expandingHref = $state(null);
-	const EXPAND_MS = 850;
 
 	/**
 	 * @param {number} n
@@ -222,13 +219,30 @@
 		zoomToCard = (card) => {
 			if (zooming) return;
 			zooming = true;
-			expandingHref = card.href;
-			// The label panel itself expands to fill the screen (CSS
-			// transition below) — this delay just needs to outlast that
-			// transition so the destination page is already "there" by the
-			// time it takes over, instead of the sphere zooming toward a
-			// point and then switching to a separate page-load moment.
-			setTimeout(() => navigateTo(card.href), EXPAND_MS);
+			const target = nodes.find((n) => n.card.href === card.href);
+			if (!target) {
+				navigateTo(card.href);
+				return;
+			}
+			const dir = target.vec.clone().applyQuaternion(group.quaternion).normalize();
+			const startPos = camera.position.clone();
+			const endPos = dir.clone().multiplyScalar(radius * 0.85);
+			const start = performance.now();
+			const duration = 1100;
+			/** @param {number} now */
+			function step(now) {
+				const p = Math.min(1, (now - start) / duration);
+				const eased = p * p * (3 - 2 * p);
+				camera.position.lerpVectors(startPos, endPos, eased);
+				camera.lookAt(0, 0, 0);
+				renderer.render(scene, camera);
+				if (p < 1) {
+					requestAnimationFrame(step);
+				} else {
+					navigateTo(card.href);
+				}
+			}
+			requestAnimationFrame(step);
 		};
 
 		function handleResize() {
@@ -266,17 +280,11 @@
 		<div class="sphere-stage" bind:this={stageEl}></div>
 		{#if ready}
 			{#each labelPositions as pos (pos.card.href)}
-				{@const isExpanding = expandingHref === pos.card.href}
-				{@const isHidden = expandingHref !== null && !isExpanding}
 				<button
 					type="button"
 					class="sphere-label"
-					class:dim={!pos.visible && !expandingHref}
-					class:expanding={isExpanding}
-					class:hide={isHidden}
-					style={isExpanding
-						? 'left: 0; top: 0; width: 100vw; height: 100vh; transform: translate(0, 0);'
-						: `left: ${pos.x}px; top: ${pos.y}px; width: 130px; height: 44px; transform: translate(-50%, -50%);`}
+					class:dim={!pos.visible}
+					style="left: {pos.x}px; top: {pos.y}px;"
 					onclick={() => go(pos.card)}
 				>
 					<span class="sphere-label-no">{pos.card.no}</span>
@@ -305,29 +313,25 @@
 	}
 
 	.sphere-label {
-		position: fixed;
+		position: absolute;
+		transform: translate(-50%, -50%);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		justify-content: center;
 		gap: 2px;
 		background: rgba(5, 10, 15, 0.55);
 		border: 1px solid rgba(255, 255, 255, 0.4);
 		border-radius: 999px;
-		padding: 0;
+		padding: 6px 14px;
 		color: #ffffff;
 		font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
 		cursor: pointer;
 		backdrop-filter: blur(6px);
-		transition: left 0.85s cubic-bezier(0.65, 0, 0.35, 1), top 0.85s cubic-bezier(0.65, 0, 0.35, 1),
-			width 0.85s cubic-bezier(0.65, 0, 0.35, 1), height 0.85s cubic-bezier(0.65, 0, 0.35, 1),
-			transform 0.85s cubic-bezier(0.65, 0, 0.35, 1), border-radius 0.85s ease,
-			background-color 0.85s ease, opacity 0.3s ease;
+		transition: opacity 0.3s ease, transform 0.15s ease;
 		pointer-events: auto;
-		z-index: 1;
 	}
 
-	.sphere-label:hover:not(.expanding) {
+	.sphere-label:hover {
 		transform: translate(-50%, -50%) scale(1.08);
 		border-color: #ffffff;
 	}
@@ -337,36 +341,14 @@
 		pointer-events: none;
 	}
 
-	.sphere-label.expanding {
-		border-radius: 0;
-		border-color: transparent;
-		background: #05070a;
-		z-index: 2;
-	}
-
-	.sphere-label.hide {
-		opacity: 0;
-		pointer-events: none;
-	}
-
 	.sphere-label-no {
 		font-size: 9px;
 		color: rgba(255, 255, 255, 0.6);
 		letter-spacing: 0.1em;
-		transition: font-size 0.85s cubic-bezier(0.65, 0, 0.35, 1);
 	}
 
 	.sphere-label-title {
 		font-size: 13px;
 		font-weight: 500;
-		transition: font-size 0.85s cubic-bezier(0.65, 0, 0.35, 1);
-	}
-
-	.sphere-label.expanding .sphere-label-no {
-		font-size: 13px;
-	}
-
-	.sphere-label.expanding .sphere-label-title {
-		font-size: 28px;
 	}
 </style>

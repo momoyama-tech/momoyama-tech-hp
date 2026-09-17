@@ -109,20 +109,6 @@
 		e.currentTarget.style.display = 'none';
 	}
 
-	let mouseX = $state(0);
-	let mouseY = $state(0);
-	let innerWidth = $state(0);
-	let innerHeight = $state(0);
-	let isMobile = $derived(innerWidth <= 1024);
-
-	/** @param {MouseEvent} e */
-	function handleMouseMove(e) {
-		if (isMobile) return;
-		mouseX = e.clientX;
-		mouseY = e.clientY;
-	}
-
-	let scrollY = $state(0);
 	let t = $derived(translations[/** @type {'JP'|'EN'} */ (language.current)]);
 
 	// Translation Logic for News List
@@ -222,8 +208,6 @@
 	);
 </script>
 
-<svelte:window onmousemove={handleMouseMove} bind:scrollY bind:innerWidth bind:innerHeight />
-
 <div
 	class="fixed inset-0 -z-50 overflow-hidden pointer-events-none transition-colors duration-500 bg-[#FAFAFA] dark:bg-black"
 >
@@ -296,174 +280,8 @@
 	</SphereNav>
 </div>
 
-<!-- Hidden Terminal Message (Interactive Playground) -->
-<div
-	class="relative flex h-32 w-full items-center justify-center overflow-hidden py-10"
-	role="presentation"
->
-	<!-- Terminal Content: Visible only when spotlight (mask) is over it -->
-	<div
-		class="pointer-events-none sticky z-20 flex flex-col items-start justify-center gap-1 font-mono text-sm"
-		style="
-			mask-image: radial-gradient(circle 150px at {mouseX}px {mouseY}px, black, transparent 100%);
-			-webkit-mask-image: radial-gradient(circle 150px at {mouseX}px {mouseY}px, black, transparent 100%);
-			mask-attachment: fixed;
-			-webkit-mask-attachment: fixed;
-		"
-	>
-		<div
-			class="flex flex-col items-start gap-1 p-4 text-green-500 font-bold tracking-wider"
-			style="text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);"
-		>
-			<p class="overflow-hidden whitespace-nowrap animate-typing-1 border-r-2 border-green-500/0">
-				root@momoyama-tech:~$ access_granted...
-			</p>
-			<p class="overflow-hidden whitespace-nowrap animate-typing-2 opacity-0">
-				system_status: optimal
-			</p>
-			<p class="overflow-hidden whitespace-nowrap animate-typing-3 opacity-0">
-				hidden_message: "Innovation starts from the dark."
-			</p>
-		</div>
-	</div>
-</div>
-
 <!-- Modal Insertion -->
 {@render children()}
 
 <!-- Secret Easter Egg -->
 <SecretPalette />
-
-<style>
-	@keyframes typing {
-		from {
-			width: 0;
-			border-color: transparent;
-		}
-		1% {
-			border-color: rgba(34, 197, 94, 0.8);
-		}
-		to {
-			width: 100%;
-			border-color: transparent;
-		}
-	}
-	@keyframes fade-in {
-		to {
-			opacity: 1;
-		}
-	}
-
-	.animate-typing-1 {
-		animation: typing 2s steps(40, end) forwards;
-		width: 0;
-	}
-	.animate-typing-2 {
-		animation:
-			typing 2s steps(40, end) forwards 2s,
-			fade-in 0.1s forwards 2s;
-		width: 0;
-	}
-	.animate-typing-3 {
-		animation:
-			typing 3s steps(40, end) forwards 4s,
-			fade-in 0.1s forwards 4s;
-		width: 0;
-	}
-
-	/* Base Spotlight Styles */
-	.spotlight-base {
-		width: 600px;
-		height: 600px;
-		left: 0;
-		top: 0;
-		display: flex;
-		opacity: 0;
-		transition:
-			opacity 0.3s ease,
-			transform 0.2s ease-out;
-	}
-	:global(.dark) .spotlight-base {
-		opacity: 1;
-	}
-
-	@property --gx {
-		syntax: '<length-percentage>';
-		inherits: false;
-		initial-value: 50%;
-	}
-	@property --gy {
-		syntax: '<length-percentage>';
-		inherits: false;
-		initial-value: 50%;
-	}
-
-	/* Synchronized Roaming for Mobile/iPad */
-	@keyframes roam-cycle {
-		0% {
-			--gx: 50vw;
-			--gy: 50vh;
-		}
-		20% {
-			--gx: 20vw;
-			--gy: 30vh;
-		} /* Top Left */
-		40% {
-			--gx: 80vw;
-			--gy: 20vh;
-		} /* Top Right */
-		60% {
-			--gx: 70vw;
-			--gy: 80vh;
-		} /* Bottom Right */
-		80% {
-			--gx: 30vw;
-			--gy: 70vh;
-		} /* Bottom Left */
-		100% {
-			--gx: 50vw;
-			--gy: 50vh;
-		}
-	}
-
-	/* Mobile/iPad (<= 1024px) */
-	@media (max-width: 1024px) {
-		.spotlight-base {
-			position: fixed !important;
-			left: 0 !important;
-			top: 0 !important;
-			/* Use shared variables for position */
-			transform: translate(var(--gx), var(--gy)) translate(-50%, -50%) !important;
-			animation: roam-cycle 15s infinite ease-in-out !important;
-			will-change: transform;
-			pointer-events: none;
-			width: 400px !important;
-			height: 400px !important;
-		}
-
-		.hero-mask-overlay {
-			/* Force Fixed to match viewport coordinates exactly */
-			position: fixed !important;
-			inset: 0 !important;
-			width: 100vw !important;
-			height: 100vh !important;
-			z-index: 20 !important;
-
-			/* Animate variables same as spotlight */
-			animation: roam-cycle 15s infinite ease-in-out !important;
-
-			/* Use variables for mask position */
-			--mask-pos: var(--gx) var(--gy);
-			mask-image: radial-gradient(
-				circle 200px at var(--mask-pos),
-				rgba(0, 0, 0, 0.1) 20%,
-				black 80%
-			) !important;
-			-webkit-mask-image: radial-gradient(
-				circle 200px at var(--mask-pos),
-				rgba(0, 0, 0, 0.1) 20%,
-				black 80%
-			) !important;
-		}
-	}
-</style>
