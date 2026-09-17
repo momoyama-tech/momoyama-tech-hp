@@ -24,7 +24,7 @@
 		document.body.classList.add('code-transition-active');
 		scrambleTransition(document.body, {
 			direction: 'toReal',
-			duration: 700,
+			duration: 380,
 			onDone: () => {
 				document.body.classList.remove('code-transition-active');
 				busy = false;
@@ -61,7 +61,7 @@
 			document.body.classList.add('code-transition-active');
 			scrambleTransition(document.body, {
 				direction: 'toCode',
-				duration: 550,
+				duration: 280,
 				onDone: () => {
 					window.location.href = url.href;
 				}
