@@ -12,7 +12,6 @@
 	import Mail from 'lucide-svelte/icons/mail';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import ContactModal from '$lib/components/ContactModal.svelte';
-	import BootSequence from '$lib/components/BootSequence.svelte';
 	import ScanRevealOverlay from '$lib/components/ScanRevealOverlay.svelte';
 	import { spring } from 'svelte/motion';
 	import { flushSync } from 'svelte';
@@ -640,9 +639,6 @@
 
 <!-- Scan Line Overlay -->
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
-
-<!-- First-visit boot sequence (see BootSequence.svelte) -->
-<BootSequence />
 
 <!-- Per-navigation scan reveal (see ScanRevealOverlay.svelte) -->
 <ScanRevealOverlay />
