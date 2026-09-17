@@ -74,7 +74,6 @@
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import SecretPalette from '$lib/components/SecretPalette.svelte';
 	import WorksSection from '$lib/components/WorksSection.svelte';
-	import { reveal } from '$lib/actions/reveal.js';
 
 	let { data, children } = $props();
 
@@ -235,16 +234,7 @@
 </div>
 
 <!-- Quick Navigation Portal -->
-<div class="relative py-24 z-30 -mt-12" use:reveal={{ threshold: 0.1 }}>
-	<div class="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
-		<div class="mb-12">
-			<span class="font-mono text-xs tracking-[0.25em] text-zinc-500 uppercase">Explore Portal</span>
-			<h2 class="font-light text-3xl sm:text-4xl tracking-tight text-zinc-900 dark:text-zinc-100 mt-2">
-				コンテンツ一覧
-			</h2>
-		</div>
-	</div>
-
+<div class="relative z-30">
 	<SphereNav cards={portalCards}>
 		<div class="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
 		<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

@@ -91,6 +91,37 @@
 		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 		stageEl.appendChild(renderer.domElement);
 
+		// Starfield backdrop — a wide, sparse point cloud independent of the
+		// nav sphere's own rotation, so the whole scene reads as "floating in
+		// space" rather than just a rotating wireframe shape on a flat bg.
+		/** @type {any} */
+		const starGroup = new THREE.Group();
+		scene.add(starGroup);
+		/** @param {number} count @param {number} rMin @param {number} rMax @param {number} size @param {number} opacity */
+		function addStarLayer(count, rMin, rMax, size, opacity) {
+			const positions = new Float32Array(count * 3);
+			for (let i = 0; i < count; i++) {
+				const r = rMin + Math.random() * (rMax - rMin);
+				const theta = Math.random() * Math.PI * 2;
+				const phi = Math.acos(2 * Math.random() - 1);
+				positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+				positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+				positions[i * 3 + 2] = r * Math.cos(phi);
+			}
+			const starGeo = new THREE.BufferGeometry();
+			starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+			const starMat = new THREE.PointsMaterial({
+				color: 0xffffff,
+				size,
+				transparent: true,
+				opacity,
+				sizeAttenuation: true
+			});
+			starGroup.add(new THREE.Points(starGeo, starMat));
+		}
+		addStarLayer(500, 12, 26, 0.09, 0.9);
+		addStarLayer(700, 26, 45, 0.05, 0.55);
+
 		group = new THREE.Group();
 		scene.add(group);
 
@@ -153,6 +184,7 @@
 		let t = 0;
 		function animate() {
 			t += 0.005;
+			starGroup.rotation.y += 0.0002;
 			if (!zooming) {
 				group.rotation.y += 0.0016;
 				group.rotation.x = Math.sin(t * 0.4) * 0.08;
@@ -165,13 +197,28 @@
 		animate();
 		ready = true;
 
+		/** @param {string} href */
+		function navigateTo(href) {
+			// Tell the destination page to skip its own entrance wipe
+			// (MeltRevealOverlay) — the camera zoom already IS the transition,
+			// so the destination should just be there when it arrives instead
+			// of playing a second reveal effect on top.
+			try {
+				sessionStorage.setItem('skip-melt-reveal', '1');
+			} catch {
+				// ignore (private browsing / storage disabled) — worst case the
+				// wipe plays once more than intended, not a functional problem
+			}
+			window.location.href = href;
+		}
+
 		/** @param {SphereCard} card */
 		zoomToCard = (card) => {
 			if (zooming) return;
 			zooming = true;
 			const target = nodes.find((n) => n.card.href === card.href);
 			if (!target) {
-				window.location.href = card.href;
+				navigateTo(card.href);
 				return;
 			}
 			const dir = target.vec.clone().applyQuaternion(group.quaternion).normalize();
@@ -191,7 +238,7 @@
 				if (p < 1) {
 					requestAnimationFrame(step);
 				} else {
-					window.location.href = card.href;
+					navigateTo(card.href);
 				}
 			}
 			requestAnimationFrame(step);
@@ -253,7 +300,7 @@
 	.sphere-nav {
 		position: relative;
 		width: 100%;
-		height: 92vh;
+		height: calc(100vh - 4rem);
 		min-height: 560px;
 		overflow: hidden;
 		background: radial-gradient(circle at 50% 45%, #0d1420 0%, #05070a 70%);
