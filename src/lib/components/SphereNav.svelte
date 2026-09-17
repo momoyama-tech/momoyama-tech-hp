@@ -253,8 +253,8 @@
 	.sphere-nav {
 		position: relative;
 		width: 100%;
-		height: min(560px, 80vh);
-		border-radius: 24px;
+		height: 92vh;
+		min-height: 560px;
 		overflow: hidden;
 		background: radial-gradient(circle at 50% 45%, #0d1420 0%, #05070a 70%);
 	}

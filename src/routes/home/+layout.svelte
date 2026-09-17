@@ -524,8 +524,10 @@
 				コンテンツ一覧
 			</h2>
 		</div>
+	</div>
 
-		<SphereNav cards={portalCards}>
+	<SphereNav cards={portalCards}>
+		<div class="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12">
 		<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 			{#each portalCards as card (card.href)}
 				{@const Icon = card.icon}
@@ -581,8 +583,8 @@
 				</a>
 			{/each}
 		</div>
-		</SphereNav>
-	</div>
+		</div>
+	</SphereNav>
 </div>
 
 <!-- Hidden Terminal Message (Interactive Playground) -->
