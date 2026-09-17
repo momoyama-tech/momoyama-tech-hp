@@ -107,9 +107,18 @@
 
 	$effect(() => {
 		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+		// An explicit reload (F5 / reload button) always replays the boot
+		// sequence, even within the same session — only regular link-driven
+		// navigation respects the once-per-session sessionStorage gate.
+		const navEntry = /** @type {PerformanceNavigationTiming | undefined} */ (
+			performance.getEntriesByType('navigation')[0]
+		);
+		const isReload = navEntry?.type === 'reload';
+
 		let alreadyBooted = true;
 		try {
-			alreadyBooted = sessionStorage.getItem('momotech-booted') === '1';
+			alreadyBooted = !isReload && sessionStorage.getItem('momotech-booted') === '1';
 		} catch {
 			// treat as already-booted if storage is unavailable
 		}
