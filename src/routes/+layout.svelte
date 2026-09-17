@@ -12,7 +12,7 @@
 	import Mail from 'lucide-svelte/icons/mail';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import ContactModal from '$lib/components/ContactModal.svelte';
-	import ScanRevealOverlay from '$lib/components/ScanRevealOverlay.svelte';
+	import MeltRevealOverlay from '$lib/components/MeltRevealOverlay.svelte';
 	import { spring } from 'svelte/motion';
 	import { flushSync } from 'svelte';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -640,8 +640,8 @@
 <!-- Scan Line Overlay -->
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
 
-<!-- Per-navigation scan reveal (see ScanRevealOverlay.svelte) -->
-<ScanRevealOverlay />
+<!-- Per-navigation melt reveal (see MeltRevealOverlay.svelte) -->
+<MeltRevealOverlay />
 
 <!-- Contact modal + toast live at the layout root so their fixed overlays
      are not trapped under the page sections' stacking contexts -->
