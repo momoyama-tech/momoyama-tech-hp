@@ -1,16 +1,17 @@
 <script>
 	// 3D navigation hub: a rotating WebGL particle sphere with each portal
-	// card's destination placed as a glowing point on its surface. Clicking
-	// a point makes the CAMERA physically travel toward it in 3D space
-	// (not an HTML label scaling up to fill the screen — that read as "the
-	// screen floating up" rather than genuine depth). Navigation only
-	// fires once the camera has arrived, with the destination page's own
-	// entrance wipe skipped (see navigateTo), so the dolly-in is the whole
-	// transition and the destination just seems to already be there. The
-	// 3D scene is a showcase/entry point only, never a replacement for the
-	// destination pages themselves, which stay plain, fast, server-rendered
-	// SvelteKit routes (SEO + accessibility + mobile perf all depend on
-	// that).
+	// card's destination placed on its surface as a small plane carrying a
+	// real screenshot of that page. Clicking a node makes the CAMERA
+	// physically travel toward it in 3D space (not an HTML label scaling up
+	// to fill the screen — that read as "the screen floating up" rather
+	// than genuine depth), so the screenshot itself grows to fill the frame
+	// via perspective as the camera approaches. Navigation only fires once
+	// the camera has arrived, with the destination page's own entrance wipe
+	// skipped (see navigateTo), so the dolly-in is the whole transition and
+	// the destination just seems to already be there. The 3D scene is a
+	// showcase/entry point only, never a replacement for the destination
+	// pages themselves, which stay plain, fast, server-rendered SvelteKit
+	// routes (SEO + accessibility + mobile perf all depend on that).
 	//
 	// Falls back to rendering `children` (the caller's normal card grid)
 	// when WebGL is unavailable or prefers-reduced-motion is set — this
@@ -23,6 +24,7 @@
 	 * @property {string} title
 	 * @property {string} desc
 	 * @property {string} no
+	 * @property {string} [preview] - static screenshot of the destination page, shown on its node
 	 */
 
 	/** @type {{ cards: SphereCard[], children?: import('svelte').Snippet }} */
@@ -149,6 +151,10 @@
 		scene.add(group);
 
 		const radius = 2.6;
+		// How far in front of a node's plane the camera stops when diving
+		// in or starts when backing out — close enough that the plane's
+		// screenshot overflows the frame, but never exactly on top of it.
+		const approachOffset = 0.02;
 		const geo = new THREE.IcosahedronGeometry(radius, 5);
 		const pointsGeo = new THREE.BufferGeometry();
 		pointsGeo.setAttribute('position', geo.attributes.position.clone());
@@ -179,20 +185,31 @@
 			vec: new THREE.Vector3(nodePositions[i].x, nodePositions[i].y, nodePositions[i].z)
 		}));
 
-		// Destinations are plain white dots, same as the rest of the
-		// sphere's surface — nothing marks them as "screens" ahead of time.
-		// The reveal comes entirely from the camera closing in until it
-		// ends up INSIDE the dot (see zoomToCard's endPos), at which point
-		// the dot's own (double-sided, so visible from inside too) surface
-		// fills the whole frame with white — it feels like the dot WAS the
-		// screen rather than a panel that was sitting there the whole time.
-		const dotGeo = new THREE.SphereGeometry(0.07, 12, 12);
-		const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-		nodes.forEach(({ vec }) => {
+		// Each destination node is a small plane carrying a real screenshot
+		// of that page, facing outward from the sphere. From a distance it
+		// reads as just another point on the sphere; closing in on it (see
+		// zoomToCard) makes that screenshot fill the frame via perspective,
+		// so the approach itself becomes "arriving at that page" rather
+		// than a generic zoom that cuts to a blank load.
+		/** @type {any} */
+		const textureLoader = new THREE.TextureLoader();
+		const previewGeo = new THREE.PlaneGeometry(0.34, 0.2125);
+		const outAxis = new THREE.Vector3(0, 0, 1);
+		nodes.forEach(({ card, vec }) => {
 			/** @type {any} */
-			const dot = new THREE.Mesh(dotGeo, dotMat);
-			dot.position.copy(vec);
-			group.add(dot);
+			let mat;
+			if (card.preview) {
+				const texture = textureLoader.load(card.preview);
+				texture.colorSpace = THREE.SRGBColorSpace;
+				mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+			} else {
+				mat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+			}
+			/** @type {any} */
+			const plane = new THREE.Mesh(previewGeo, mat);
+			plane.position.copy(vec);
+			plane.quaternion.setFromUnitVectors(outAxis, vec.clone().normalize());
+			group.add(plane);
 		});
 
 		function updateLabels() {
@@ -259,11 +276,11 @@
 			}
 			const dir = target.vec.clone().applyQuaternion(group.quaternion).normalize();
 			const startPos = camera.position.clone();
-			// Push all the way past the dot's near face and stop at its
-			// center — with the dot's material set to DoubleSide, ending up
-			// inside it means its surface fills the entire frame with white
-			// right before navigating, instead of just sitting close to it.
-			const endPos = dir.clone().multiplyScalar(radius);
+			// Stop just short of the plane's own position (not exactly on
+			// it — a flat plane has no depth, so sitting exactly at its
+			// center is a degenerate, zero-distance case) so its screenshot
+			// overflows the frame right before navigating.
+			const endPos = dir.clone().multiplyScalar(radius - approachOffset);
 			const start = performance.now();
 			const duration = 1200;
 			/** @param {number} now */
@@ -296,7 +313,7 @@
 		}
 		const returnNode = returnHref ? nodes.find((n) => n.card.href === returnHref) : undefined;
 		if (returnNode) {
-			const returnVec = returnNode.vec;
+			const returnVec = returnNode.vec.clone().normalize().multiplyScalar(radius - approachOffset);
 			zooming = true;
 			camera.position.copy(returnVec);
 			camera.lookAt(0, 0, 0);

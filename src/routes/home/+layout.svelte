@@ -25,7 +25,8 @@
 			title: 'Services',
 			desc: 'Web制作・映像演出・IT教育・プロジェクト共創',
 			icon: Code2,
-			accent: 'cyan'
+			accent: 'cyan',
+			preview: '/sphere-previews/services.png'
 		},
 		{
 			href: '/works',
@@ -33,7 +34,8 @@
 			title: 'Works',
 			desc: '式典動画・プロジェクションマッピング実績',
 			icon: Clapperboard,
-			accent: 'purple'
+			accent: 'purple',
+			preview: '/sphere-previews/works.png'
 		},
 		{
 			href: '/projects',
@@ -41,7 +43,8 @@
 			title: 'Projects',
 			desc: '部員が制作したプロダクト・作品一覧',
 			icon: FolderGit2,
-			accent: 'emerald'
+			accent: 'emerald',
+			preview: '/sphere-previews/projects.png'
 		},
 		{
 			href: '/contact',
@@ -49,7 +52,8 @@
 			title: 'Contact',
 			desc: 'ご相談・お見積り・お問い合わせ',
 			icon: MailIcon,
-			accent: 'amber'
+			accent: 'amber',
+			preview: '/sphere-previews/contact.png'
 		}
 	];
 
