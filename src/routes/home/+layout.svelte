@@ -69,117 +69,14 @@
 		amber: 'group-hover:shadow-[0_0_40px_-8px_rgba(245,158,11,0.35)] group-hover:border-amber-400/50'
 	};
 
-	import ActivitySection from '$lib/components/ActivitySection.svelte';
 	import ScheduleSection from '$lib/components/ScheduleSection.svelte';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
 	import CategoryFilter from '$lib/components/CategoryFilter.svelte';
 	import SecretPalette from '$lib/components/SecretPalette.svelte';
-	import ServicesSection from '$lib/components/ServicesSection.svelte';
 	import WorksSection from '$lib/components/WorksSection.svelte';
-	import ContactSection from '$lib/components/ContactSection.svelte';
 	import { reveal } from '$lib/actions/reveal.js';
 
 	let { data, children } = $props();
-
-	// Fixed Hero Text
-	const heroTextEN = [
-		'Think rationally.',
-		'Act for others.',
-		'Explore thoroughly.',
-		'Innovate boldly.',
-		'Question constantly.'
-	];
-	const heroTextJP = [
-		'合理的な判断で',
-		'利他的な技術を',
-		'徹底的な探究から',
-		'革新的な未来へ',
-		'常に懐疑的な視点を忘れない'
-	];
-
-	// Typing animation state
-	let typedLines = $state(heroTextEN.map(() => ''));
-	let showJapaneseLines = $state(new Array(heroTextJP.length).fill(false));
-	let cursorPosition = $state({ line: 0, visible: true });
-	let isTyping = $state(true);
-
-	// Typing animation initialization
-	/** @type {NodeJS.Timeout} */
-	let typingInterval;
-	/** @type {NodeJS.Timeout} */
-	let blinkInterval;
-
-	onMount(() => {
-		startTyping();
-	});
-
-	function startTyping() {
-		const TYPE_SPEED = 35;
-		const TYPE_VARIANCE = 15;
-		const COMMA_PAUSE = 100;
-		const LINE_NEXT_DELAY = 100;
-		const LAST_LINE_DELAY = 1000;
-		const CURSOR_BLINK_SPEED = 530;
-
-		let lineIdx = 0;
-		let charIdx = 0;
-
-		function loop() {
-			if (lineIdx >= heroTextEN.length) {
-				isTyping = false;
-				cursorPosition = { line: heroTextEN.length - 1, visible: true };
-				let count = 0;
-				blinkInterval = setInterval(() => {
-					cursorPosition = { ...cursorPosition, visible: !cursorPosition.visible };
-					count++;
-					if (count > 6) {
-						clearInterval(blinkInterval);
-						cursorPosition = { ...cursorPosition, visible: false };
-					}
-				}, CURSOR_BLINK_SPEED);
-				return;
-			}
-
-			const targetLine = heroTextEN[lineIdx];
-
-			if (charIdx <= targetLine.length) {
-				typedLines[lineIdx] = targetLine.substring(0, charIdx);
-				cursorPosition = { line: lineIdx, visible: true };
-
-				let delay = TYPE_SPEED + Math.random() * TYPE_VARIANCE;
-				const char = targetLine[charIdx - 1];
-				if (char && /[.,!?;:]/.test(char)) {
-					delay += COMMA_PAUSE;
-				}
-
-				charIdx++;
-				typingInterval = setTimeout(loop, delay);
-			} else {
-				showJapaneseLines[lineIdx] = true;
-				const isLastLine = lineIdx === heroTextEN.length - 1;
-				const nextDelay = isLastLine ? LAST_LINE_DELAY : LINE_NEXT_DELAY;
-
-				if (isLastLine) {
-					lineIdx++;
-					typingInterval = setTimeout(loop, nextDelay);
-				} else {
-					setTimeout(() => {
-						lineIdx++;
-						charIdx = 0;
-						loop();
-					}, 300);
-				}
-			}
-		}
-
-		setTimeout(loop, 500);
-	}
-
-	// Cleanup on destroy
-	onDestroy(() => {
-		if (typingInterval) clearTimeout(typingInterval);
-		if (blinkInterval) clearInterval(blinkInterval);
-	});
 
 	// Category & News Logic
 	let selectedCategory = $state('All');
@@ -218,10 +115,6 @@
 	let innerWidth = $state(0);
 	let innerHeight = $state(0);
 	let isMobile = $derived(innerWidth <= 1024);
-
-	// Mobile Auto-Scan Animation (CSS based now)
-	let spotlightEl = $state();
-	/* Eliminated JS Sync Loop for Mobile/iPad to use pure CSS */
 
 	/** @param {MouseEvent} e */
 	function handleMouseMove(e) {
@@ -312,37 +205,6 @@
 		updateTranslations();
 	});
 
-	// Hero Mask Logic
-	let heroContainer = $state();
-	let heroMaskPos = $state({ x: -1000, y: -1000 });
-
-	// The spotlight ("light" mode) is a hero-only effect. Track whether the
-	// hero section is still on screen so it never bleeds onto other sections.
-	let heroSection = $state();
-	let heroInView = $state(true);
-
-	$effect(() => {
-		// Dependency on scrollY is required to update rect calculation on scroll
-		const _s = scrollY;
-		if (isMobile) return;
-
-		if (heroContainer) {
-			const rect = heroContainer.getBoundingClientRect();
-			heroMaskPos = {
-				x: mouseX - rect.left,
-				y: mouseY - rect.top
-			};
-		}
-	});
-
-	$effect(() => {
-		const _s = scrollY;
-		const _h = innerHeight;
-		if (heroSection) {
-			heroInView = heroSection.getBoundingClientRect().bottom > 120;
-		}
-	});
-
 	// Reactive Light Detection for Headings
 	let projectsTitle = $state();
 	let newsTitle = $state();
@@ -363,40 +225,6 @@
 
 <svelte:window onmousemove={handleMouseMove} bind:scrollY bind:innerWidth bind:innerHeight />
 
-<!-- Global Ambient Background & Spotlight -->
-<!-- Global Ambient Background & Spotlight -->
-<div
-	class="fixed inset-0 z-9999 overflow-hidden pointer-events-none"
-	style="mix-blend-mode: normal;"
->
-	<div
-		bind:this={spotlightEl}
-		class="spotlight-base absolute rounded-full transition-transform duration-75 ease-out will-change-transform flex items-center justify-center placeholder:overflow-hidden"
-		style="
-			/* Force NO transform/style on mobile from JS to avoid conflict */
-			transform: {isMobile ? '' : `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`};
-			background: transparent;
-			backdrop-filter: brightness(1.5) contrast(1.5);
-			opacity: {theme.isDark && theme.isSpotlightEnabled && heroInView ? 1 : 0};
-			transition: opacity 0.3s ease, transform 0.2s ease-out;
-		"
-	>
-		<!-- Grid Overlay inside Spotlight -->
-		<div
-			class="absolute inset-0 w-full h-full"
-			style="
-				background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-				background-size: 20px 20px;
-				mask-image: {isMobile
-				? 'radial-gradient(circle closest-side, black, transparent 60%)'
-				: 'radial-gradient(circle closest-side, black, transparent 80%)'};
-				-webkit-mask-image: {isMobile
-				? 'radial-gradient(circle closest-side, black, transparent 60%)'
-				: 'radial-gradient(circle closest-side, black, transparent 80%)'};
-			"
-		></div>
-	</div>
-</div>
 <div
 	class="fixed inset-0 -z-50 overflow-hidden pointer-events-none transition-colors duration-500 bg-[#FAFAFA] dark:bg-black"
 >
@@ -404,115 +232,6 @@
 		class="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-multiply"
 		style="background-image: url(&quot;data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E&quot;);"
 	></div>
-</div>
-
-<!-- Main Content (Background for Modal) -->
-<section bind:this={heroSection} class="hero-section relative min-h-screen w-full overflow-hidden">
-	<div
-		class="relative z-10 w-full h-full mx-auto min-h-screen flex flex-col justify-center py-32 px-6 md:px-12 lg:px-20"
-	>
-		<div class="w-full max-w-[1200px] mx-auto">
-			<div class="flex flex-col md:flex-row items-end w-full gap-12 md:gap-0">
-				<!-- Hero Text Container (Base + Lit layers) -->
-				<div
-					class="relative w-full md:w-[70%] flex flex-col gap-1 md:gap-1"
-					style="min-height: 25rem;"
-				>
-					<!-- Layer 1: Text (Visual Foundation) -->
-					<!-- Standard text styling. In normal state (Spotlight OFF), clearly visible with full opacity. -->
-					<div
-						class="flex flex-col gap-1 md:gap-1"
-					>
-						{#each heroTextEN as line, i}
-							<div class="overflow-hidden" style="min-height: clamp(2rem, 6vw, 4.5rem);">
-								<span
-									class="block text-black leading-[1.1] tracking-tighter wrap-break-word antialiased transition-colors duration-300 dark:text-white"
-									style="
-										font-family: 'Inter', sans-serif; 
-										font-size: clamp(2rem, 6vw, 4.5rem); 
-										font-weight: 800; 
-										letter-spacing: -0.05em; 
-										-webkit-font-smoothing: antialiased; 
-										-moz-osx-font-smoothing: grayscale;
-									"
-								>
-									{typedLines[i] ||
-										''}{#if cursorPosition.line === i && cursorPosition.visible}<span
-											style="color: {theme.isDark
-												? '#FFF'
-												: '#000'}; font-weight: 800; margin-left: 4px; display: inline-block; width: 4px;"
-											>|</span
-										>{/if}
-								</span>
-							</div>
-						{/each}
-					</div>
-
-					<!-- Layer 2: Darkness Overlay + Spotlight Hole (Active only when Spotlight is switched ON) -->
-					{#if theme.isDark && theme.isSpotlightEnabled}
-						<div
-							bind:this={heroContainer}
-							class="hero-mask-overlay absolute inset-0 z-20 pointer-events-none"
-							style="
-								background-color: #0a0a0a;
-								mask-image: radial-gradient(circle 200px at var(--mask-x, var(--x)) var(--mask-y, var(--y)), transparent 20%, black 80%);
-								-webkit-mask-image: radial-gradient(circle 200px at var(--mask-x, var(--x)) var(--mask-y, var(--y)), transparent 20%, black 80%);
-								--x: {heroMaskPos.x}px;
-								--y: {heroMaskPos.y}px;
-							"
-						></div>
-					{/if}
-				</div>
-				<div class="w-full md:w-[30%] flex flex-col gap-4 md:gap-5 text-right pb-1 md:pb-2">
-					<div class="flex flex-col gap-2">
-						{#each heroTextJP as line, i}
-							<p
-								class="text-gray-500 font-medium tracking-wide transition-opacity duration-1000 ease-out"
-								class:opacity-0={!showJapaneseLines[i]}
-								class:opacity-100={showJapaneseLines[i]}
-								style="font-family: 'Zen Kaku Gothic New', sans-serif; font-size: clamp(1rem, 1.5vw, 1.25rem);"
-							>
-								{line}
-							</p>
-						{/each}
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-</section>
-
-<!-- Activity Section (Overview) -->
-<div class="relative py-24 z-40 -mt-24 pt-48" use:reveal={{ threshold: 0.1 }}>
-	<div
-		class="absolute top-0 left-1/2 -translate-x-1/2 text-[15vw] font-bold text-gray-900 -z-10 select-none pointer-events-none leading-none tracking-tighter opacity-[0.03]"
-		style="font-family: 'Inter', sans-serif;"
-	>
-		ACTIVITIES
-	</div>
-	<ActivitySection />
-</div>
-
-<!-- Services Section -->
-<div class="relative py-12 z-35" use:reveal={{ threshold: 0.1 }}>
-	<div
-		class="absolute top-0 left-1/2 -translate-x-1/2 text-[15vw] font-bold text-gray-900 -z-10 select-none pointer-events-none leading-none tracking-tighter opacity-[0.03]"
-		style="font-family: 'Inter', sans-serif;"
-	>
-		SERVICES
-	</div>
-	<ServicesSection />
-</div>
-
-<!-- Contact Section -->
-<div class="relative py-12 z-35" use:reveal={{ threshold: 0.1 }}>
-	<div
-		class="absolute top-0 left-1/2 -translate-x-1/2 text-[15vw] font-bold text-gray-900 -z-10 select-none pointer-events-none leading-none tracking-tighter opacity-[0.03]"
-		style="font-family: 'Inter', sans-serif;"
-	>
-		CONTACT
-	</div>
-	<ContactSection />
 </div>
 
 <!-- Quick Navigation Portal -->
