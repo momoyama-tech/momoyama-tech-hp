@@ -60,7 +60,10 @@
 	.melt-panel {
 		position: absolute;
 		inset: -15%;
-		background: linear-gradient(135deg, #0a0a0a 0%, #111827 55%, #0a0a0a 100%);
+		/* Light-mode default — matches the page background instead of
+		   forcing every transition through a dark flash regardless of
+		   theme. */
+		background: linear-gradient(135deg, #f4f4f5 0%, #ffffff 55%, #f4f4f5 100%);
 		filter: url(#melt-distort);
 		-webkit-mask-image: linear-gradient(
 			to bottom,
@@ -76,6 +79,10 @@
 			black var(--edge),
 			black 100%
 		);
+	}
+
+	:global(.dark) .melt-panel {
+		background: linear-gradient(135deg, #0a0a0a 0%, #111827 55%, #0a0a0a 100%);
 	}
 
 	.melt-bar {
