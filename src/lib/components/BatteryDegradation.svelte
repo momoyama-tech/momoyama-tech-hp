@@ -9,12 +9,13 @@
 	// than "low power" — noise should degrade the chrome, not the content
 	// someone's trying to read.
 	//
-	// Charging shows a small literal battery+bolt badge in the corner with
-	// an animated charging fill, instead of an ambient effect. Two ambient
-	// attempts (a cyan glow pulse on random cards, then green bubbles
-	// rising like carbonation) were both too abstract to actually read as
-	// "charging" rather than just "something is happening" — sometimes the
-	// obvious literal icon is the right call over a cleverer abstraction.
+	// Charging shows a small corner readout: a ring that fills to the
+	// actual battery percentage, with the number in the middle. Two ambient
+	// attempts before this (a cyan glow pulse on random cards, then green
+	// bubbles rising like carbonation) both read as vague "something's
+	// happening" rather than specifically charging, and a literal
+	// battery-shaped icon after that showed charging unambiguously but not
+	// the actual level — this is the version that answers "how much."
 	//
 	// Battery Status API (navigator.getBattery) is Chromium-only — Firefox
 	// and Safari never shipped it (removed from the spec track over
@@ -66,37 +67,44 @@
 			return level >= 0.5 ? 0 : (0.5 - level) / 0.5;
 		}
 
+		const ringCircumference = 2 * Math.PI * 16; // matches the SVG circle's r=16
+
+		function renderPercentage() {
+			if (!chargeBadge) return;
+			const pct = Math.round(battery.level * 100);
+			const ringEl = chargeBadge.querySelector('.battery-ring-fill');
+			const textEl = chargeBadge.querySelector('.battery-ring-text');
+			ringEl?.setAttribute('stroke-dashoffset', String(ringCircumference * (1 - pct / 100)));
+			if (textEl) textEl.textContent = `${pct}`;
+		}
+
 		function startChargeBadge() {
 			if (chargeAnimRunning || !chargeBadge) return;
 			chargeAnimRunning = true;
 			chargeBadge.classList.add('battery-charge-badge-visible');
-			const found = chargeBadge.querySelector('.battery-charge-fill');
+			const found = chargeBadge.querySelector('.battery-ring-fill');
 			if (!found) return;
-			const fillEl = found;
-			const maxWidth = 20;
-			const cycleDuration = 1700;
+			const ringEl = found;
 			const start = performance.now();
+			const cycleDuration = 2200;
 
 			/** @param {number} now */
-			function tick(now) {
+			function breathe(now) {
 				if (!chargeAnimRunning) return;
-				const elapsed = (now - start) % cycleDuration;
-				const p = elapsed / cycleDuration;
-				// Fills over the first 70% of each cycle, holds briefly full,
-				// then the next cycle's modulo wrap reads as a quick reset —
-				// the familiar "charging" icon animation shape.
-				const fillP = Math.min(1, p / 0.7);
-				fillEl.setAttribute('width', String(maxWidth * fillP));
-				requestAnimationFrame(tick);
+				const p = ((now - start) % cycleDuration) / cycleDuration;
+				// A slow breathe on the ring's own opacity signals "actively
+				// charging" — the fill level itself only moves when the real
+				// battery level changes, via renderPercentage().
+				const envelope = 0.65 + Math.sin(p * Math.PI * 2) * 0.35;
+				ringEl.setAttribute('opacity', envelope.toFixed(2));
+				requestAnimationFrame(breathe);
 			}
-			requestAnimationFrame(tick);
+			requestAnimationFrame(breathe);
 		}
 
 		function stopChargeBadge() {
 			chargeAnimRunning = false;
 			chargeBadge?.classList.remove('battery-charge-badge-visible');
-			const fillEl = chargeBadge?.querySelector('.battery-charge-fill');
-			fillEl?.setAttribute('width', '0');
 		}
 
 		function update() {
@@ -104,6 +112,7 @@
 			charging = battery.charging;
 			intensity = computeIntensity(battery.level, charging);
 			document.documentElement.style.setProperty('--battery-intensity', String(intensity));
+			renderPercentage();
 			if (charging && !wasCharging) startChargeBadge();
 			if (!charging && wasCharging) stopChargeBadge();
 		}
@@ -198,17 +207,30 @@
 <div class="battery-noise-overlay" aria-hidden="true"></div>
 
 <div class="battery-charge-badge" bind:this={chargeBadge} aria-hidden="true">
-	<svg width="30" height="16" viewBox="0 0 30 16" xmlns="http://www.w3.org/2000/svg">
-		<rect x="1" y="1" width="24" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" />
-		<rect x="26" y="5" width="2.5" height="6" rx="1" fill="currentColor" />
-		<rect class="battery-charge-fill" x="3.5" y="3.5" width="0" height="9" rx="1.5" fill="#22c55e" />
-		<path
-			class="battery-charge-bolt"
-			d="M14.5 3.5 L10 9 H13 L11.5 12.5 L17 7 H13.5 Z"
-			fill="#facc15"
-			stroke="#a16207"
-			stroke-width="0.4"
+	<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+		<circle cx="20" cy="20" r="16" fill="none" stroke="rgba(148, 163, 184, 0.28)" stroke-width="3" />
+		<circle
+			class="battery-ring-fill"
+			cx="20"
+			cy="20"
+			r="16"
+			fill="none"
+			stroke="#22c55e"
+			stroke-width="3"
+			stroke-linecap="round"
+			stroke-dasharray="100.53"
+			stroke-dashoffset="100.53"
+			transform="rotate(-90 20 20)"
 		/>
+		<text
+			class="battery-ring-text"
+			x="20"
+			y="24"
+			text-anchor="middle"
+			font-size="10"
+			font-family="'SF Mono', 'Menlo', 'Consolas', monospace"
+			fill="currentColor">--</text
+		>
 	</svg>
 </div>
 
