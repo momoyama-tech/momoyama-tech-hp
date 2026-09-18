@@ -6,6 +6,7 @@
 	import { onDestroy } from 'svelte';
 	import { localize } from '$lib/i18n/localize.svelte.js';
 	import { submitInquiry } from '$lib/contact.js';
+	import { getMousePosition } from '$lib/utils/mousePosition.js';
 
 	/**
 	 * @type {{
@@ -77,21 +78,20 @@
 
 	/** @type {HTMLTextAreaElement | undefined} */
 	let messageEl = $state();
-	/** @type {HTMLSelectElement | undefined} */
-	let categoryEl = $state();
 	/** @type {HTMLDivElement | undefined} */
 	let fakeCursorEl = $state();
 
-	// Pre-fill when opened from a specific service card. The cursor visibly
-	// travels from the category field (which was just auto-selected) down
-	// to the message box, "clicks" in, and only then does the message type
-	// itself out character by character — reads as "something is actively
-	// filling this in for you" rather than text that was just always
-	// there, or a value that just silently appeared. Positioned with
-	// `left`/`top` (not `transform`) and moved via requestAnimationFrame,
-	// not CSS @keyframes — see the note in BatteryDegradation.svelte for
-	// why this codebase avoids both for anything on a repeating/JS-driven
-	// timer.
+	// Pre-fill when opened from a specific service card. The fake cursor
+	// starts exactly where the visitor's real cursor is (tracked globally
+	// by mousePosition.js since page load), travels down to the message
+	// box, "clicks" in, stays resting there while the message types itself
+	// out character by character, then travels back to wherever the real
+	// cursor is by then and fades out — so it reads as "your own cursor
+	// did this," not a second pointer that appeared from nowhere and left
+	// mid-air. Positioned with `left`/`top` (not `transform`) and moved via
+	// requestAnimationFrame, not CSS @keyframes — see the note in
+	// BatteryDegradation.svelte for why this codebase avoids both for
+	// anything on a repeating/JS-driven timer.
 	let primed = $state(false);
 	let typingCancelled = false;
 	$effect(() => {
@@ -103,40 +103,55 @@
 		}
 	});
 
-	function moveCursorThenType(/** @type {string} */ fullText) {
-		const reduceMotion =
-			typeof window !== 'undefined' &&
-			window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-		if (reduceMotion || !fakeCursorEl || !messageEl || !categoryEl) {
-			typeMessage(fullText);
+	/**
+	 * @param {{ x: number, y: number }} from
+	 * @param {{ x: number, y: number }} to
+	 * @param {number} duration
+	 * @param {() => void} onDone
+	 */
+	function animateCursor(from, to, duration, onDone) {
+		if (!fakeCursorEl) {
+			onDone();
 			return;
 		}
 		const cursor = fakeCursorEl;
-		const startRect = categoryEl.getBoundingClientRect();
-		const endRect = messageEl.getBoundingClientRect();
-		const startX = startRect.left + startRect.width / 2;
-		const startY = startRect.top + startRect.height / 2;
-		const endX = endRect.left + 28;
-		const endY = endRect.top + 22;
-
-		cursor.style.left = `${startX}px`;
-		cursor.style.top = `${startY}px`;
-		cursor.style.opacity = '1';
-
 		const start = performance.now();
-		const duration = 550;
 
 		/** @param {number} now */
 		function move(now) {
 			if (typingCancelled) return;
 			const p = Math.min(1, (now - start) / duration);
 			const eased = 1 - Math.pow(1 - p, 3);
-			cursor.style.left = `${startX + (endX - startX) * eased}px`;
-			cursor.style.top = `${startY + (endY - startY) * eased}px`;
+			cursor.style.left = `${from.x + (to.x - from.x) * eased}px`;
+			cursor.style.top = `${from.y + (to.y - from.y) * eased}px`;
 			if (p < 1) {
 				requestAnimationFrame(move);
-				return;
+			} else {
+				onDone();
 			}
+		}
+		requestAnimationFrame(move);
+	}
+
+	function moveCursorThenType(/** @type {string} */ fullText) {
+		const reduceMotion =
+			typeof window !== 'undefined' &&
+			window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (reduceMotion || !fakeCursorEl || !messageEl) {
+			typeMessage(fullText, () => {});
+			return;
+		}
+		const cursor = fakeCursorEl;
+		const home = getMousePosition();
+		const endRect = messageEl.getBoundingClientRect();
+		const target = { x: endRect.left + 28, y: endRect.top + 22 };
+
+		cursor.style.left = `${home.x}px`;
+		cursor.style.top = `${home.y}px`;
+		cursor.style.opacity = '1';
+
+		animateCursor(home, target, 550, () => {
+			if (typingCancelled) return;
 			// A quick two-step opacity pulse reads as a click, without
 			// touching transform/scale.
 			cursor.style.opacity = '0.35';
@@ -145,16 +160,26 @@
 				cursor.style.opacity = '1';
 				setTimeout(() => {
 					if (typingCancelled) return;
-					cursor.style.opacity = '0';
-					typeMessage(fullText);
+					typeMessage(fullText, () => {
+						if (typingCancelled || !fakeCursorEl) return;
+						// Head back to wherever the real cursor actually is
+						// now (the visitor may have moved it while typing
+						// played out), then fade out on arrival.
+						const returnTo = getMousePosition();
+						animateCursor(target, returnTo, 450, () => {
+							if (fakeCursorEl) fakeCursorEl.style.opacity = '0';
+						});
+					});
 				}, 90);
 			}, 90);
-		}
-		requestAnimationFrame(move);
+		});
 	}
 
-	/** @param {string} fullText */
-	function typeMessage(fullText) {
+	/**
+	 * @param {string} fullText
+	 * @param {() => void} onDone
+	 */
+	function typeMessage(fullText, onDone) {
 		message = '';
 		messageEl?.focus();
 		let i = 0;
@@ -163,7 +188,10 @@
 			if (typingCancelled) return;
 			i++;
 			message = fullText.slice(0, i);
-			if (i >= fullText.length) return;
+			if (i >= fullText.length) {
+				onDone();
+				return;
+			}
 			const justTyped = fullText[i - 1];
 			let delay = 26 + Math.random() * 24;
 			if (justTyped === '」' || justTyped === '、') delay += 160;
@@ -319,7 +347,7 @@
 						>{c.value.required}</span
 					>
 				</div>
-				<select id="cf-service" bind:value={serviceType} bind:this={categoryEl} class={fieldClass}>
+				<select id="cf-service" bind:value={serviceType} class={fieldClass}>
 					{#each serviceTypes as type, i}
 						<option value={type} class="bg-white dark:bg-[#141414] text-[#1D1D1F] dark:text-white">
 							{c.value.serviceTypes[i]}

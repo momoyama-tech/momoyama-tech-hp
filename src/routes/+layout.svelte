@@ -14,6 +14,10 @@
 	import ContactModal from '$lib/components/ContactModal.svelte';
 	import CodeTransition from '$lib/components/CodeTransition.svelte';
 	import BatteryDegradation from '$lib/components/BatteryDegradation.svelte';
+	// Side-effect import: starts tracking the real cursor position from page
+	// load, so ContactForm's fake-cursor typing demo can start (and end) at
+	// wherever the visitor's actual mouse is, not an arbitrary point.
+	import '$lib/utils/mousePosition.js';
 	import { spring } from 'svelte/motion';
 	import { flushSync } from 'svelte';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
