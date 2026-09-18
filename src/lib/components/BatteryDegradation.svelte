@@ -1,25 +1,31 @@
 <script>
 	// The lower the visitor's real battery is, the more "corrupted" the UI
-	// looks — a constant film-grain layer that gets grainier, plus random
+	// looks — a constant film-grain layer that gets grainier, random
 	// "shaped" elements (cards, buttons, anything with a visible border or
-	// rounded corner) briefly losing their edges — the outline wobbles into
-	// a jagged clip-path and settles back. Deliberately NOT touching text:
-	// an earlier version flickered random words into scrambled code, but
-	// that briefly makes the words unreadable, which reads as broken rather
-	// than "low power" — noise should degrade the chrome, not the content
-	// someone's trying to read.
+	// rounded corner) briefly losing their edges (jitterRandomShape), and —
+	// less often — an element visibly "browning out": dimming to near-black
+	// and flickering back on, like it lost power for a second and rebooted
+	// (blackoutRandomShape). The brownout is deliberately unlabeled in the
+	// moment (no icon or text pointing at it when it happens) — it's meant
+	// to be an experience, not a status report; a version that flashed a
+	// small "⚡LOW" marker at the exact spot when it happened felt too
+	// on-the-nose. Deliberately NOT touching text: an earlier version
+	// flickered random words into scrambled code, but that briefly makes
+	// the words unreadable, which reads as broken rather than "low power."
 	//
-	// Charging shows a small corner readout: an ASCII-style terminal bar
-	// (`[▓▓▓▓▓▓▓▓░░] 78%`) that re-decrypts itself from scrambled
-	// characters into the real reading whenever the percentage changes —
-	// reusing textScramble.js, the same mechanism CodeTransition uses for
-	// page transitions, so this reads as the same visual language as the
-	// rest of the site instead of a new gimmick. Earlier attempts: a cyan
-	// glow pulse on random cards and green bubbles rising like carbonation
-	// both read as vague "something's happening" rather than specifically
-	// charging; a battery-shaped icon showed charging but not the level; a
-	// plain circular percentage ring showed the level but wasn't very
-	// distinctive. This version answers "how much" with more personality.
+	// The corner readout answers "why," quietly, for whoever looks: an
+	// ASCII-style terminal bar (`[▓▓▓▓▓▓▓▓░░] 78%`) that re-decrypts itself
+	// from scrambled characters into the real reading whenever the
+	// percentage changes — reusing textScramble.js, the same mechanism
+	// CodeTransition uses for page transitions. It shows green while
+	// charging and amber while draining, using the same element and
+	// mechanism for both — just a color and a sign of direction, not two
+	// separate widgets. Earlier charging-only attempts: a cyan glow pulse
+	// on random cards and green bubbles rising like carbonation both read
+	// as vague "something's happening" rather than specifically charging; a
+	// battery-shaped icon showed charging but not the level; a plain
+	// circular percentage ring showed the level but wasn't very
+	// distinctive.
 	//
 	// Battery Status API (navigator.getBattery) is Chromium-only — Firefox
 	// and Safari never shipped it (removed from the spec track over
@@ -94,10 +100,11 @@
 			scrambleTransition(textEl, { direction: 'toReal', duration: 500 });
 		}
 
-		function startChargeBadge() {
+		function startBadge() {
 			if (chargeAnimRunning || !chargeBadge) return;
 			chargeAnimRunning = true;
 			chargeBadge.classList.add('battery-charge-badge-visible');
+			chargeBadge.classList.toggle('battery-charge-badge-low', !charging);
 			lastRenderedPct = -1; // force a fresh decrypt-in on every appearance
 			renderPercentage(true);
 
@@ -108,20 +115,22 @@
 			}, 530);
 		}
 
-		function stopChargeBadge() {
+		function stopBadge() {
 			chargeAnimRunning = false;
 			chargeBadge?.classList.remove('battery-charge-badge-visible');
 			if (cursorTimer) clearInterval(cursorTimer);
 		}
 
 		function update() {
-			const wasCharging = charging;
+			const wasBadgeShown = charging || intensity > 0.02;
 			charging = battery.charging;
 			intensity = computeIntensity(battery.level, charging);
 			document.documentElement.style.setProperty('--battery-intensity', String(intensity));
+			const shouldShowBadge = charging || intensity > 0.02;
 			renderPercentage();
-			if (charging && !wasCharging) startChargeBadge();
-			if (!charging && wasCharging) stopChargeBadge();
+			if (chargeBadge) chargeBadge.classList.toggle('battery-charge-badge-low', !charging);
+			if (shouldShowBadge && !wasBadgeShown) startBadge();
+			if (!shouldShowBadge && wasBadgeShown) stopBadge();
 		}
 
 		/** @param {Element} el */
@@ -171,16 +180,48 @@
 			requestAnimationFrame(jitter);
 		}
 
+		function blackoutRandomShape() {
+			const found = randomShapeElement();
+			if (!found) return;
+			const el = found;
+			const originalOpacity = el.style.opacity;
+			const start = performance.now();
+			const duration = 700;
+			// Dim almost to nothing, then stutter back up in uneven steps —
+			// reads as a component losing power and rebooting, not a clean
+			// fade. Opacity only (no filter/transform), consistent with the
+			// rest of this file.
+			const steps = [0.06, 0.45, 0.12, 0.65, 0.25, 1];
+
+			/** @param {number} now */
+			function flicker(now) {
+				const p = Math.min(1, (now - start) / duration);
+				if (p < 1) {
+					const idx = Math.min(steps.length - 1, Math.floor(p * steps.length));
+					el.style.opacity = String(steps[idx]);
+					requestAnimationFrame(flicker);
+				} else {
+					el.style.opacity = originalOpacity;
+				}
+			}
+			requestAnimationFrame(flicker);
+		}
+
 		function scheduleGlitch() {
 			// Healthy + unplugged: just recheck occasionally in case it drops.
 			// Otherwise: trigger more often the more intense it gets. Floor
 			// kept well above what stress-testing showed was safe, as margin
 			// for a mechanism that only gets exercised over a long real
-			// session, not a quick manual check. Charging is handled entirely
-			// by the charge badge above, not this one.
+			// session, not a quick manual check. Charging never jitters or
+			// browns out — that's a draining-battery thing only.
 			const delay = intensity <= 0.02 ? 4000 : Math.max(1500, 5000 - intensity * 4000);
 			glitchTimer = setTimeout(() => {
-				if (intensity > 0.02 && !charging) jitterRandomShape();
+				if (intensity > 0.02 && !charging) {
+					// Brownouts are rarer than jitters — an occasional "it just
+					// crashed" moment against a steadier background instability.
+					if (Math.random() < 0.3) blackoutRandomShape();
+					else jitterRandomShape();
+				}
 				scheduleGlitch();
 			}, delay);
 		}
@@ -202,7 +243,7 @@
 
 		return () => {
 			cancelled = true;
-			stopChargeBadge();
+			stopBadge();
 			if (glitchTimer) clearTimeout(glitchTimer);
 			battery?.removeEventListener('levelchange', update);
 			battery?.removeEventListener('chargingchange', update);
@@ -255,6 +296,13 @@
 		letter-spacing: 0.02em;
 		color: #4ade80;
 		white-space: pre;
+		transition:
+			opacity 0.4s ease,
+			color 0.6s ease;
+	}
+
+	.battery-charge-badge:global(.battery-charge-badge-low) {
+		color: #f59e0b;
 	}
 
 	.battery-charge-badge:global(.battery-charge-badge-visible) {
