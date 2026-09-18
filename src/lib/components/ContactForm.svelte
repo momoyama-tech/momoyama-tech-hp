@@ -79,7 +79,7 @@
 	/** @type {HTMLTextAreaElement | undefined} */
 	let messageEl = $state();
 	/** @type {HTMLDivElement | undefined} */
-	let fakeCursorEl = $state();
+	let fakeCursorEl;
 
 	// Pre-fill when opened from a specific service card. The fake cursor
 	// starts exactly where the visitor's real cursor is (tracked globally
@@ -92,12 +92,35 @@
 	// own cursor did this" rather than a second pointer next to yours is to
 	// make sure yours isn't visibly sitting there at the same time; it
 	// reappears the instant the fake one fades out, at the same spot.
+	//
+	// The cursor element is created here and appended straight to
+	// `document.body`, NOT placed in the template — ContactModal's panel
+	// has `backdrop-blur-2xl`, and `backdrop-filter` on an ancestor creates
+	// a new containing block for `position: fixed` descendants, silently
+	// turning "fixed to the viewport" into "fixed to that panel" instead.
+	// A cursor templated inside the modal was landing at the wrong spot
+	// and getting clipped by the panel's own bounds — appending directly
+	// to body sidesteps that entirely.
+	//
 	// Positioned with `left`/`top` (not `transform`) and moved via
 	// requestAnimationFrame, not CSS @keyframes — see the note in
 	// BatteryDegradation.svelte for why this codebase avoids both for
 	// anything on a repeating/JS-driven timer.
 	let primed = $state(false);
 	let typingCancelled = false;
+
+	function ensureFakeCursor() {
+		if (fakeCursorEl || typeof document === 'undefined') return fakeCursorEl;
+		const el = document.createElement('div');
+		el.setAttribute('aria-hidden', 'true');
+		el.style.cssText =
+			'position:fixed;left:0;top:0;z-index:10001;opacity:0;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.35));';
+		el.innerHTML =
+			'<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M2 1.5 L2 14.5 L5.5 11.5 L7.8 16.2 L9.6 15.3 L7.3 10.6 L11.8 10.2 Z" fill="#111827" stroke="white" stroke-width="1.2" stroke-linejoin="round" /></svg>';
+		document.body.appendChild(el);
+		fakeCursorEl = el;
+		return el;
+	}
 	$effect(() => {
 		if (initialContext && !primed) {
 			primed = true;
@@ -141,11 +164,11 @@
 		const reduceMotion =
 			typeof window !== 'undefined' &&
 			window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-		if (reduceMotion || !fakeCursorEl || !messageEl) {
+		const cursor = reduceMotion ? undefined : ensureFakeCursor();
+		if (!cursor || !messageEl) {
 			typeMessage(fullText, () => {});
 			return;
 		}
-		const cursor = fakeCursorEl;
 		const home = getMousePosition();
 		const endRect = messageEl.getBoundingClientRect();
 		const target = { x: endRect.left + 28, y: endRect.top + 22 };
@@ -227,6 +250,8 @@
 		if (typeof document !== 'undefined') {
 			document.body.classList.remove('cf-cursor-hidden');
 		}
+		fakeCursorEl?.remove();
+		fakeCursorEl = undefined;
 	});
 
 	function reset() {
@@ -444,29 +469,7 @@
 	</form>
 {/if}
 
-<div class="cf-fake-cursor" bind:this={fakeCursorEl} aria-hidden="true">
-	<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-		<path
-			d="M2 1.5 L2 14.5 L5.5 11.5 L7.8 16.2 L9.6 15.3 L7.3 10.6 L11.8 10.2 Z"
-			fill="#111827"
-			stroke="white"
-			stroke-width="1.2"
-			stroke-linejoin="round"
-		/>
-	</svg>
-</div>
-
 <style>
-	.cf-fake-cursor {
-		position: fixed;
-		left: 0;
-		top: 0;
-		z-index: 10001;
-		opacity: 0;
-		pointer-events: none;
-		filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
-	}
-
 	/* `!important` + `*` because buttons/links/inputs all set their own
 	   explicit `cursor` (Tailwind's cursor-pointer etc.), which otherwise
 	   overrides a plain inherited `cursor: none` on body — leaving the real
@@ -474,11 +477,5 @@
 	:global(body.cf-cursor-hidden),
 	:global(body.cf-cursor-hidden *) {
 		cursor: none !important;
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.cf-fake-cursor {
-			display: none;
-		}
 	}
 </style>
