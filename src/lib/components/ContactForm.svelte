@@ -214,8 +214,12 @@
 	onDestroy(() => {
 		typingCancelled = true;
 		// Guarantee the real cursor comes back even if the modal is closed
-		// mid-sequence, before the normal fade-out step ever runs.
-		document.body.style.cursor = '';
+		// mid-sequence, before the normal fade-out step ever runs. onDestroy
+		// also fires during SSR (where there's no `document`), so this must
+		// stay guarded.
+		if (typeof document !== 'undefined') {
+			document.body.style.cursor = '';
+		}
 	});
 
 	function reset() {
