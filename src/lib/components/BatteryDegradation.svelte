@@ -9,6 +9,13 @@
 	// than "low power" — noise should degrade the chrome, not the content
 	// someone's trying to read.
 	//
+	// Charging is treated as a genuinely different state, not just a
+	// dampened version of "low battery": a small baseline effect is always
+	// present while plugged in (even near 100%, so the feature is actually
+	// visible on a laptop that's usually charging while in use), and
+	// instead of the jittery "breaking apart" look, shaped elements get a
+	// gentle cyan glow pulse — reads as energy flowing in, not corruption.
+	//
 	// Battery Status API (navigator.getBattery) is Chromium-only — Firefox
 	// and Safari never shipped it (removed from the spec track over
 	// fingerprinting concerns). This is a progressive-enhancement showcase
@@ -34,22 +41,30 @@
 
 		let cancelled = false;
 		let intensity = 0;
+		let charging = false;
 		/** @type {any} */
 		let battery;
 		/** @type {ReturnType<typeof setTimeout> | undefined} */
 		let glitchTimer;
 
-		/** @param {number} level @param {boolean} charging */
-		function computeIntensity(level, charging) {
-			// No visible effect above 50% battery; ramps to full intensity by
-			// the time it hits empty. Charging halves it — a low battery
-			// that's actively refilling doesn't need to feel as dire.
-			const raw = level >= 0.5 ? 0 : (0.5 - level) / 0.5;
-			return charging ? raw * 0.4 : raw;
+		/** @param {number} level @param {boolean} isCharging */
+		function computeIntensity(level, isCharging) {
+			if (isCharging) {
+				// Always at least a little visible, even near a full charge —
+				// otherwise the feature basically never shows up on a laptop
+				// that spends most of its time plugged in — growing (capped
+				// well below the unplugged max) as the charge being refilled
+				// gets lower.
+				return Math.min(0.6, 0.15 + (1 - level) * 0.5);
+			}
+			// Unplugged: no visible effect above 50% battery, ramping to full
+			// intensity by the time it hits empty.
+			return level >= 0.5 ? 0 : (0.5 - level) / 0.5;
 		}
 
 		function update() {
-			intensity = computeIntensity(battery.level, battery.charging);
+			charging = battery.charging;
+			intensity = computeIntensity(battery.level, charging);
 			document.documentElement.style.setProperty('--battery-intensity', String(intensity));
 		}
 
@@ -61,7 +76,7 @@
 			return hasRadius || hasBorder;
 		}
 
-		function jitterRandomShape() {
+		function randomShapeElement() {
 			const candidates = Array.from(document.querySelectorAll('div, button, a, img')).filter(
 				(el) => {
 					const r = el.getBoundingClientRect();
@@ -70,8 +85,14 @@
 					return looksLikeAShape(el);
 				}
 			);
-			if (!candidates.length) return;
-			const el = /** @type {HTMLElement} */ (candidates[(Math.random() * candidates.length) | 0]);
+			if (!candidates.length) return undefined;
+			return /** @type {HTMLElement} */ (candidates[(Math.random() * candidates.length) | 0]);
+		}
+
+		function jitterRandomShape() {
+			const found = randomShapeElement();
+			if (!found) return;
+			const el = found;
 			const originalClip = el.style.clipPath;
 			const start = performance.now();
 			const duration = 380;
@@ -94,15 +115,44 @@
 			requestAnimationFrame(jitter);
 		}
 
+		function pulseRandomShape() {
+			// The charging counterpart to jitterRandomShape: a smooth glow
+			// that breathes in and out instead of a jagged edge — "gaining
+			// power" should look and feel like the opposite of "corrupting."
+			const found = randomShapeElement();
+			if (!found) return;
+			const el = found;
+			const originalShadow = el.style.boxShadow;
+			const start = performance.now();
+			const duration = 900;
+			const peak = Math.min(1, intensity + 0.25);
+
+			/** @param {number} now */
+			function pulse(now) {
+				const p = Math.min(1, (now - start) / duration);
+				if (p < 1) {
+					const envelope = Math.sin(p * Math.PI) * peak; // fade in, hold, fade out
+					el.style.boxShadow = `0 0 ${(14 * envelope).toFixed(1)}px ${(3 * envelope).toFixed(1)}px rgba(34, 211, 238, ${(0.55 * envelope).toFixed(2)})`;
+					requestAnimationFrame(pulse);
+				} else {
+					el.style.boxShadow = originalShadow;
+				}
+			}
+			requestAnimationFrame(pulse);
+		}
+
 		function scheduleGlitch() {
-			// Healthy battery: just recheck occasionally in case it drops.
-			// Degraded: glitch more often the lower it gets (6s down to ~2s).
-			// Floor kept well above what stress-testing showed was safe, as
-			// margin for a mechanism that only gets exercised over a long
-			// real session, not a quick manual check.
+			// Healthy + unplugged: just recheck occasionally in case it drops.
+			// Otherwise: trigger more often the more intense it gets (6s down
+			// to ~2s). Floor kept well above what stress-testing showed was
+			// safe, as margin for a mechanism that only gets exercised over a
+			// long real session, not a quick manual check.
 			const delay = intensity <= 0.02 ? 4000 : Math.max(2000, 6000 - intensity * 4000);
 			glitchTimer = setTimeout(() => {
-				if (intensity > 0.02) jitterRandomShape();
+				if (intensity > 0.02) {
+					if (charging) pulseRandomShape();
+					else jitterRandomShape();
+				}
 				scheduleGlitch();
 			}, delay);
 		}
