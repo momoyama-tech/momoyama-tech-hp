@@ -9,11 +9,12 @@
 	// than "low power" — noise should degrade the chrome, not the content
 	// someone's trying to read.
 	//
-	// Charging is a genuinely different, unambiguous state rather than a
-	// dampened version of "low battery": small green bubbles rise up the
-	// screen like carbonation — a first version tried a cyan glow pulse on
-	// random cards instead, but that read as generic "something's
-	// happening" rather than specifically "charging," so it's gone.
+	// Charging shows a small literal battery+bolt badge in the corner with
+	// an animated charging fill, instead of an ambient effect. Two ambient
+	// attempts (a cyan glow pulse on random cards, then green bubbles
+	// rising like carbonation) were both too abstract to actually read as
+	// "charging" rather than just "something is happening" — sometimes the
+	// obvious literal icon is the right call over a cleverer abstraction.
 	//
 	// Battery Status API (navigator.getBattery) is Chromium-only — Firefox
 	// and Safari never shipped it (removed from the spec track over
@@ -28,16 +29,15 @@
 	// exactly what a periodic effect does — reproducibly corrupted this
 	// app's paint into a squeezed-into-one-corner render, the same failure
 	// class documented in layout.css for the old client-side-navigation
-	// bug. Direct style-property mutation via requestAnimationFrame (no
-	// @keyframes, no class-toggle-triggered animation, and — for the
-	// bubbles — `bottom`/`margin-left` rather than `transform`, since
-	// transform was part of the combination that broke) never reproduced
-	// it under the same stress test, so that's the only mechanism used for
-	// the repeating parts of this effect, same as textScramble.js.
+	// bug. Direct style/attribute mutation via requestAnimationFrame (no
+	// @keyframes, no class-toggle-triggered animation, no `transform`)
+	// never reproduced it under the same stress test, so that's the only
+	// mechanism used for the repeating parts of this effect, same as
+	// textScramble.js.
 	import { onMount } from 'svelte';
 
 	/** @type {HTMLDivElement | undefined} */
-	let bubbleLayer = $state();
+	let chargeBadge = $state();
 
 	onMount(() => {
 		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -46,14 +46,11 @@
 		let cancelled = false;
 		let intensity = 0;
 		let charging = false;
-		let bubblesRunning = false;
-		let bubbleCount = 0;
+		let chargeAnimRunning = false;
 		/** @type {any} */
 		let battery;
 		/** @type {ReturnType<typeof setTimeout> | undefined} */
 		let glitchTimer;
-		/** @type {ReturnType<typeof setTimeout> | undefined} */
-		let bubbleTimer;
 
 		/** @param {number} level @param {boolean} isCharging */
 		function computeIntensity(level, isCharging) {
@@ -69,13 +66,46 @@
 			return level >= 0.5 ? 0 : (0.5 - level) / 0.5;
 		}
 
+		function startChargeBadge() {
+			if (chargeAnimRunning || !chargeBadge) return;
+			chargeAnimRunning = true;
+			chargeBadge.classList.add('battery-charge-badge-visible');
+			const found = chargeBadge.querySelector('.battery-charge-fill');
+			if (!found) return;
+			const fillEl = found;
+			const maxWidth = 20;
+			const cycleDuration = 1700;
+			const start = performance.now();
+
+			/** @param {number} now */
+			function tick(now) {
+				if (!chargeAnimRunning) return;
+				const elapsed = (now - start) % cycleDuration;
+				const p = elapsed / cycleDuration;
+				// Fills over the first 70% of each cycle, holds briefly full,
+				// then the next cycle's modulo wrap reads as a quick reset —
+				// the familiar "charging" icon animation shape.
+				const fillP = Math.min(1, p / 0.7);
+				fillEl.setAttribute('width', String(maxWidth * fillP));
+				requestAnimationFrame(tick);
+			}
+			requestAnimationFrame(tick);
+		}
+
+		function stopChargeBadge() {
+			chargeAnimRunning = false;
+			chargeBadge?.classList.remove('battery-charge-badge-visible');
+			const fillEl = chargeBadge?.querySelector('.battery-charge-fill');
+			fillEl?.setAttribute('width', '0');
+		}
+
 		function update() {
 			const wasCharging = charging;
 			charging = battery.charging;
 			intensity = computeIntensity(battery.level, charging);
 			document.documentElement.style.setProperty('--battery-intensity', String(intensity));
-			if (charging && !wasCharging) startBubbles();
-			if (!charging && wasCharging) stopBubbles();
+			if (charging && !wasCharging) startChargeBadge();
+			if (!charging && wasCharging) stopChargeBadge();
 		}
 
 		/** @param {Element} el */
@@ -125,77 +155,13 @@
 			requestAnimationFrame(jitter);
 		}
 
-		function spawnBubble() {
-			if (!bubbleLayer) return;
-			// A denser fizz than before, but kept unobtrusive by opacity
-			// (below) rather than by count.
-			const maxBubbles = 10 + Math.round(intensity * 6);
-			if (bubbleCount >= maxBubbles) return;
-			bubbleCount++;
-
-			const bubble = document.createElement('div');
-			bubble.className = 'battery-bubble';
-			const size = 5 + Math.random() * 12;
-			bubble.style.width = `${size}px`;
-			bubble.style.height = `${size}px`;
-			bubble.style.left = `${4 + Math.random() * 92}%`;
-			bubble.style.bottom = '-16px';
-			bubbleLayer.appendChild(bubble);
-
-			const start = performance.now();
-			const duration = 4200 + Math.random() * 2600;
-			const wobbleAmp = 6 + Math.random() * 10;
-			const wobbleFreq = 1.2 + Math.random() * 1.3;
-			const wobblePhase = Math.random() * Math.PI * 2;
-			// Faint enough to sit in the background rather than draw the eye
-			// — count carries the "fizzing" feel now, not individual opacity.
-			const baseOpacity = Math.min(0.4, 0.2 + intensity * 0.18);
-
-			/** @param {number} now */
-			function rise(now) {
-				const p = Math.min(1, (now - start) / duration);
-				const travel = (window.innerHeight + 40) * p;
-				bubble.style.bottom = `${travel - 16}px`;
-				bubble.style.marginLeft = `${Math.sin(p * Math.PI * 2 * wobbleFreq + wobblePhase) * wobbleAmp * (1 - p * 0.4)}px`;
-				const fade = p < 0.12 ? p / 0.12 : p > 0.82 ? (1 - p) / 0.18 : 1;
-				bubble.style.opacity = String(Math.max(0, Math.min(1, fade)) * baseOpacity);
-				if (p < 1) {
-					requestAnimationFrame(rise);
-				} else {
-					bubble.remove();
-					bubbleCount--;
-				}
-			}
-			requestAnimationFrame(rise);
-		}
-
-		function scheduleBubbleSpawn() {
-			if (!bubblesRunning) return;
-			spawnBubble();
-			const delay = Math.max(350, 900 - intensity * 500) + Math.random() * 300;
-			bubbleTimer = setTimeout(scheduleBubbleSpawn, delay);
-		}
-
-		function startBubbles() {
-			if (bubblesRunning) return;
-			bubblesRunning = true;
-			scheduleBubbleSpawn();
-		}
-
-		function stopBubbles() {
-			bubblesRunning = false;
-			if (bubbleTimer) clearTimeout(bubbleTimer);
-			// Bubbles already rising just finish their own rise() loop and
-			// remove themselves — no need to force-clear them.
-		}
-
 		function scheduleGlitch() {
 			// Healthy + unplugged: just recheck occasionally in case it drops.
 			// Otherwise: trigger more often the more intense it gets. Floor
 			// kept well above what stress-testing showed was safe, as margin
 			// for a mechanism that only gets exercised over a long real
 			// session, not a quick manual check. Charging is handled entirely
-			// by the bubble loop above, not this one.
+			// by the charge badge above, not this one.
 			const delay = intensity <= 0.02 ? 4000 : Math.max(1500, 5000 - intensity * 4000);
 			glitchTimer = setTimeout(() => {
 				if (intensity > 0.02 && !charging) jitterRandomShape();
@@ -220,7 +186,7 @@
 
 		return () => {
 			cancelled = true;
-			stopBubbles();
+			stopChargeBadge();
 			if (glitchTimer) clearTimeout(glitchTimer);
 			battery?.removeEventListener('levelchange', update);
 			battery?.removeEventListener('chargingchange', update);
@@ -230,7 +196,21 @@
 </script>
 
 <div class="battery-noise-overlay" aria-hidden="true"></div>
-<div class="battery-bubble-layer" bind:this={bubbleLayer} aria-hidden="true"></div>
+
+<div class="battery-charge-badge" bind:this={chargeBadge} aria-hidden="true">
+	<svg width="30" height="16" viewBox="0 0 30 16" xmlns="http://www.w3.org/2000/svg">
+		<rect x="1" y="1" width="24" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="1.5" />
+		<rect x="26" y="5" width="2.5" height="6" rx="1" fill="currentColor" />
+		<rect class="battery-charge-fill" x="3.5" y="3.5" width="0" height="9" rx="1.5" fill="#22c55e" />
+		<path
+			class="battery-charge-bolt"
+			d="M14.5 3.5 L10 9 H13 L11.5 12.5 L17 7 H13.5 Z"
+			fill="#facc15"
+			stroke="#a16207"
+			stroke-width="0.4"
+		/>
+	</svg>
+</div>
 
 <style>
 	:global(:root) {
@@ -252,30 +232,25 @@
 		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='batteryNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23batteryNoise)'/%3E%3C/svg%3E");
 	}
 
-	.battery-bubble-layer {
+	.battery-charge-badge {
 		position: fixed;
-		inset: 0;
-		z-index: 9993;
+		right: 16px;
+		bottom: 16px;
+		z-index: 9994;
 		pointer-events: none;
-		overflow: hidden;
+		opacity: 0;
+		transition: opacity 0.4s ease;
+		color: rgba(148, 163, 184, 0.9);
+		filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.15));
 	}
 
-	:global(.battery-bubble) {
-		position: absolute;
-		border-radius: 50%;
-		background: radial-gradient(
-			circle at 30% 25%,
-			rgba(220, 252, 231, 0.95),
-			rgba(74, 222, 128, 0.55) 55%,
-			rgba(21, 128, 61, 0.2) 100%
-		);
-		box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
-		opacity: 0;
+	.battery-charge-badge:global(.battery-charge-badge-visible) {
+		opacity: 1;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
 		.battery-noise-overlay,
-		.battery-bubble-layer {
+		.battery-charge-badge {
 			display: none;
 		}
 	}
