@@ -1,8 +1,8 @@
 <script>
 	// The lower the visitor's real battery is, the more "corrupted" the UI
-	// looks — a constant film-grain layer that gets grainier, random
-	// "shaped" elements (cards, buttons, anything with a visible border or
-	// rounded corner) briefly losing their edges (jitterRandomShape), and —
+	// looks — random "shaped" elements (cards, buttons, anything with a
+	// visible border or rounded corner) briefly losing their edges
+	// (jitterRandomShape), and —
 	// less often — an element visibly "browning out": dimming to near-black
 	// and flickering back on, like it lost power for a second and rebooted
 	// (blackoutRandomShape). The brownout is deliberately unlabeled in the
@@ -125,7 +125,6 @@
 			const wasBadgeShown = charging || intensity > 0.02;
 			charging = battery.charging;
 			intensity = computeIntensity(battery.level, charging);
-			document.documentElement.style.setProperty('--battery-intensity', String(intensity));
 			const shouldShowBadge = charging || intensity > 0.02;
 			renderPercentage();
 			if (chargeBadge) chargeBadge.classList.toggle('battery-charge-badge-low', !charging);
@@ -247,37 +246,15 @@
 			if (glitchTimer) clearTimeout(glitchTimer);
 			battery?.removeEventListener('levelchange', update);
 			battery?.removeEventListener('chargingchange', update);
-			document.documentElement.style.removeProperty('--battery-intensity');
 		};
 	});
 </script>
-
-<div class="battery-noise-overlay" aria-hidden="true"></div>
 
 <div class="battery-charge-badge" bind:this={chargeBadge} aria-hidden="true">
 	<span class="battery-ascii-readout"></span><span class="battery-cursor">_</span>
 </div>
 
 <style>
-	:global(:root) {
-		--battery-intensity: 0;
-	}
-
-	.battery-noise-overlay {
-		/* Static background + a plain opacity transition only — no
-		   mix-blend-mode, no @keyframes. Both were tried and each
-		   reproducibly corrupted this app's paint/compositing under
-		   repeated triggering (see the script comment above); this plain
-		   version survived the same stress test cleanly. */
-		position: fixed;
-		inset: 0;
-		z-index: 9990;
-		pointer-events: none;
-		opacity: calc(var(--battery-intensity) * 0.22);
-		transition: opacity 0.8s ease;
-		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='batteryNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23batteryNoise)'/%3E%3C/svg%3E");
-	}
-
 	.battery-charge-badge {
 		position: fixed;
 		right: 16px;
@@ -314,7 +291,6 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.battery-noise-overlay,
 		.battery-charge-badge {
 			display: none;
 		}
