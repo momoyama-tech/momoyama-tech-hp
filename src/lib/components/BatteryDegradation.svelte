@@ -50,12 +50,11 @@
 		/** @param {number} level @param {boolean} isCharging */
 		function computeIntensity(level, isCharging) {
 			if (isCharging) {
-				// Always at least a little visible, even near a full charge —
-				// otherwise the feature basically never shows up on a laptop
-				// that spends most of its time plugged in — growing (capped
-				// well below the unplugged max) as the charge being refilled
-				// gets lower.
-				return Math.min(0.6, 0.15 + (1 - level) * 0.5);
+				// Clearly visible even near a full charge — otherwise the
+				// feature basically never shows up on a laptop that spends
+				// most of its time plugged in — growing further as the
+				// charge being refilled gets lower.
+				return Math.min(0.9, 0.4 + (1 - level) * 0.5);
 			}
 			// Unplugged: no visible effect above 50% battery, ramping to full
 			// intensity by the time it hits empty.
@@ -115,24 +114,22 @@
 			requestAnimationFrame(jitter);
 		}
 
-		function pulseRandomShape() {
+		/** @param {HTMLElement} el */
+		function pulseOne(el) {
 			// The charging counterpart to jitterRandomShape: a smooth glow
 			// that breathes in and out instead of a jagged edge — "gaining
 			// power" should look and feel like the opposite of "corrupting."
-			const found = randomShapeElement();
-			if (!found) return;
-			const el = found;
 			const originalShadow = el.style.boxShadow;
 			const start = performance.now();
-			const duration = 900;
-			const peak = Math.min(1, intensity + 0.25);
+			const duration = 1100;
+			const peak = Math.min(1, intensity + 0.3);
 
 			/** @param {number} now */
 			function pulse(now) {
 				const p = Math.min(1, (now - start) / duration);
 				if (p < 1) {
 					const envelope = Math.sin(p * Math.PI) * peak; // fade in, hold, fade out
-					el.style.boxShadow = `0 0 ${(14 * envelope).toFixed(1)}px ${(3 * envelope).toFixed(1)}px rgba(34, 211, 238, ${(0.55 * envelope).toFixed(2)})`;
+					el.style.boxShadow = `0 0 ${(26 * envelope).toFixed(1)}px ${(7 * envelope).toFixed(1)}px rgba(34, 211, 238, ${(0.85 * envelope).toFixed(2)})`;
 					requestAnimationFrame(pulse);
 				} else {
 					el.style.boxShadow = originalShadow;
@@ -141,16 +138,31 @@
 			requestAnimationFrame(pulse);
 		}
 
+		function pulseRandomShapes() {
+			// More than one at a time while charging — a single 1.1s pulse on
+			// one random element, once every few seconds, is easy to miss
+			// entirely if you're not looking right at it.
+			const seen = new Set();
+			const count = 2 + Math.round(intensity);
+			for (let i = 0; i < count; i++) {
+				const el = randomShapeElement();
+				if (el && !seen.has(el)) {
+					seen.add(el);
+					pulseOne(el);
+				}
+			}
+		}
+
 		function scheduleGlitch() {
 			// Healthy + unplugged: just recheck occasionally in case it drops.
-			// Otherwise: trigger more often the more intense it gets (6s down
-			// to ~2s). Floor kept well above what stress-testing showed was
-			// safe, as margin for a mechanism that only gets exercised over a
-			// long real session, not a quick manual check.
-			const delay = intensity <= 0.02 ? 4000 : Math.max(2000, 6000 - intensity * 4000);
+			// Otherwise: trigger more often the more intense it gets. Floor
+			// kept well above what stress-testing showed was safe, as margin
+			// for a mechanism that only gets exercised over a long real
+			// session, not a quick manual check.
+			const delay = intensity <= 0.02 ? 4000 : Math.max(1500, 5000 - intensity * 4000);
 			glitchTimer = setTimeout(() => {
 				if (intensity > 0.02) {
-					if (charging) pulseRandomShape();
+					if (charging) pulseRandomShapes();
 					else jitterRandomShape();
 				}
 				scheduleGlitch();
@@ -199,7 +211,7 @@
 		inset: 0;
 		z-index: 9990;
 		pointer-events: none;
-		opacity: calc(var(--battery-intensity) * 0.15);
+		opacity: calc(var(--battery-intensity) * 0.22);
 		transition: opacity 0.8s ease;
 		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='batteryNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23batteryNoise)'/%3E%3C/svg%3E");
 	}
