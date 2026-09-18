@@ -127,9 +127,9 @@
 
 		function spawnBubble() {
 			if (!bubbleLayer) return;
-			// Moderate cap — enough to read as "continuously fizzing," not a
-			// wall of bubbles.
-			const maxBubbles = 4 + Math.round(intensity * 2);
+			// A denser fizz than before, but kept unobtrusive by opacity
+			// (below) rather than by count.
+			const maxBubbles = 10 + Math.round(intensity * 6);
 			if (bubbleCount >= maxBubbles) return;
 			bubbleCount++;
 
@@ -147,7 +147,9 @@
 			const wobbleAmp = 6 + Math.random() * 10;
 			const wobbleFreq = 1.2 + Math.random() * 1.3;
 			const wobblePhase = Math.random() * Math.PI * 2;
-			const baseOpacity = Math.min(0.85, 0.45 + intensity * 0.4);
+			// Faint enough to sit in the background rather than draw the eye
+			// — count carries the "fizzing" feel now, not individual opacity.
+			const baseOpacity = Math.min(0.32, 0.14 + intensity * 0.16);
 
 			/** @param {number} now */
 			function rise(now) {
@@ -170,7 +172,7 @@
 		function scheduleBubbleSpawn() {
 			if (!bubblesRunning) return;
 			spawnBubble();
-			const delay = Math.max(700, 1700 - intensity * 900) + Math.random() * 400;
+			const delay = Math.max(350, 900 - intensity * 500) + Math.random() * 300;
 			bubbleTimer = setTimeout(scheduleBubbleSpawn, delay);
 		}
 
