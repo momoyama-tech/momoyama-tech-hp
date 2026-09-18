@@ -639,12 +639,12 @@
 				{t.footer.copy}
 				{t.footer.rights}
 			</p>
-			<div class="mt-3">
-				<VisitorCounter />
-			</div>
 		</div>
 	</div>
 </footer>
+
+<!-- Fixed corner visitor counter (see VisitorCounter.svelte) -->
+<VisitorCounter />
 
 <!-- Scan Line Overlay -->
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>

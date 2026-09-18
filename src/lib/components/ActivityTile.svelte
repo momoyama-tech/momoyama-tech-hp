@@ -19,19 +19,24 @@
 	let mouseX = $state(0);
 	let mouseY = $state(0);
 
-	// The circuit-board lines (cog card) "draw" themselves in — stroke
-	// animating from fully hidden to fully traced — the first time the
-	// card scrolls into view, rather than only ever appearing on hover.
-	// `pathLength="1"` normalizes every path to the same 0–1 range
-	// regardless of its actual geometry, so a single dasharray/dashoffset
-	// pair works for all of them without measuring each one in JS.
-	let circuitDrawn = $state(false);
+	// Each card's decorative background — circuit traces (cog), grid +
+	// golden-ratio spiral (palette), particle grid (sparkles) — used to be
+	// invisible or barely-there until hover, so on a page nobody hovers
+	// three cards at once, only one was ever doing anything. Now all three
+	// "power on" together the first time the row scrolls into view: the
+	// cog card's lines draw themselves in (stroke animating from fully
+	// hidden to fully traced — `pathLength="1"` normalizes every path to
+	// the same 0–1 range so one dasharray/dashoffset pair works for all of
+	// them without measuring each in JS), and the other two fade their
+	// background art in at a much more visible strength than the old
+	// hover-only opacity.
+	let revealed = $state(false);
 	onMount(() => {
-		if (iconType !== 'cog' || !tileElement) return;
+		if (!tileElement) return;
 		const observer = new IntersectionObserver(
 			(entries) => {
 				if (entries[0]?.isIntersecting) {
-					circuitDrawn = true;
+					revealed = true;
 					observer.disconnect();
 				}
 			},
@@ -157,9 +162,9 @@
 		{#if iconType === 'cog'}
 			<div
 				class="absolute inset-0 z-0 transition-opacity duration-700 delay-100 ease-[cubic-bezier(0.23,1,0.32,1)]"
-				class:opacity-0={!circuitDrawn}
-				class:opacity-[0.08]={circuitDrawn && !isHovered}
-				class:opacity-[0.15]={isHovered}
+				class:opacity-0={!revealed}
+				class:opacity-[0.28]={revealed && !isHovered}
+				class:opacity-[0.45]={isHovered}
 			>
 				<svg
 					class="h-full w-full stroke-blue-900/60 dark:stroke-cyan-300/80"
@@ -174,19 +179,19 @@
 					     first scrolls into view. -->
 					<path
 						d="M40 0 V60 H100 V120"
-						style="stroke-dasharray: 180; stroke-dashoffset: {circuitDrawn
+						style="stroke-dasharray: 180; stroke-dashoffset: {revealed
 							? 0
 							: 180}; transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0s;"
 					/>
 					<path
 						d="M160 340 V200 H240 V100"
-						style="stroke-dasharray: 320; stroke-dashoffset: {circuitDrawn
+						style="stroke-dasharray: 320; stroke-dashoffset: {revealed
 							? 0
 							: 320}; transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.15s;"
 					/>
 					<path
 						d="M300 0 V150 H200"
-						style="stroke-dasharray: 250; stroke-dashoffset: {circuitDrawn
+						style="stroke-dasharray: 250; stroke-dashoffset: {revealed
 							? 0
 							: 250}; transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.3s;"
 					/>
@@ -265,11 +270,12 @@
 		<!-- 2. Design: UI Grid & Golden Ratio (Palette) -->
 		{#if iconType === 'palette'}
 			<div
-				class="absolute inset-0 z-0 opacity-0 transition-opacity duration-700 ease-out"
-				class:opacity-[0.1]={!isHovered}
-				class:opacity-[0.3]={isHovered}
+				class="absolute inset-0 z-0 transition-opacity duration-700 ease-out"
+				class:opacity-0={!revealed}
+				class:opacity-[0.28]={revealed && !isHovered}
+				class:opacity-[0.5]={isHovered}
 			>
-				{#if isHovered}
+				{#if revealed}
 					<!-- Golden Ratio & Grid -->
 					<svg
 						class="absolute inset-0 h-full w-full stroke-blue-500/40 dark:stroke-white/30"
@@ -296,11 +302,16 @@
 		<!-- 3. Creative Tech: Particles & Projector (Sparkles) -->
 		{#if iconType === 'sparkles'}
 			<div class="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[2.5rem]">
-				<!-- Layer 1: Base Grid (Faint, Static) -->
+				<!-- Layer 1: Base Grid — faint by default, but boosted once the
+				     card has scrolled into view so this card visibly "powers
+				     on" alongside the other two instead of staying dim until
+				     someone happens to hover it. -->
 				<div
-					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1.5px,transparent_1.5px)] [background-size:20px_20px] opacity-[0.05]"
+					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1.5px,transparent_1.5px)] [background-size:20px_20px] transition-opacity duration-700 ease-out"
+					class:opacity-[0.05]={!revealed}
+					class:opacity-[0.35]={revealed}
 					style="transform: translateX({-rotateY * 4}px) translateY({-rotateX *
-						4}px); transition: transform 0.1s; will-change: transform;"
+						4}px); transition: transform 0.1s, opacity 0.7s ease-out; will-change: transform;"
 				></div>
 
 				{#if isHovered && theme.isSpotlightEnabled}

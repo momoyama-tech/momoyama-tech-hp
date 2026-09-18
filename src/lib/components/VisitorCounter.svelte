@@ -61,19 +61,33 @@
 		<span class="vc-digits"
 			>{#each displayDigits as d, i (i)}<span class="vc-digit">{d}</span>{/each}</span
 		>
-		<span>人目の訪問者です</span>
+		<span>人目</span>
 	</div>
 {/if}
 
 <style>
+	/* A fixed corner badge, not a footer line — a line at the very bottom
+	   of a long page is something almost nobody scrolls far enough to see.
+	   Bottom-LEFT specifically, so it doesn't collide with
+	   BatteryDegradation's bottom-right readout. */
 	.visitor-counter {
+		position: fixed;
+		left: 16px;
+		bottom: 16px;
+		z-index: 9993;
 		display: inline-flex;
 		align-items: baseline;
 		gap: 0.35em;
+		padding: 5px 9px;
+		border-radius: 6px;
+		background: rgba(5, 10, 15, 0.55);
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		backdrop-filter: blur(6px);
 		font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
-		font-size: 12px;
+		font-size: 11px;
 		letter-spacing: 0.02em;
 		color: rgba(161, 161, 170, 0.9);
+		pointer-events: none;
 	}
 
 	.vc-digits {
@@ -86,5 +100,11 @@
 		display: inline-block;
 		min-width: 0.65em;
 		text-align: center;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.visitor-counter {
+			display: none;
+		}
 	}
 </style>
