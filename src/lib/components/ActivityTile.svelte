@@ -257,7 +257,7 @@
 						4}px); transition: transform 0.1s; will-change: transform;"
 				></div>
 
-				{#if isHovered}
+				{#if isHovered && theme.isSpotlightEnabled}
 					<!-- Layer 2: Scan Light (Inversion Effect) -->
 					<div
 						class="absolute inset-0 z-10 mix-blend-exclusion"
@@ -290,40 +290,6 @@
 					<div
 						class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-400 opacity-0 animate-single-pulse"
 						style="width: 0; height: 0;"
-					></div>
-				{/if}
-
-				<!-- Layer 1: Base Grid (Faint, Static) -->
-				<div
-					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1.5px,transparent_1.5px)] [background-size:20px_20px] opacity-[0.05]"
-				></div>
-
-				{#if isHovered && theme.isSpotlightEnabled}
-					<!-- Layer 2: Scan Light (Inversion Effect) -->
-					<div
-						class="absolute inset-0 z-10 mix-blend-exclusion"
-						transition:fade={{ duration: 200 }}
-						style="
-							background: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, rgba(255, 255, 255, 0.3), transparent 100%);
-						"
-					></div>
-
-					<!-- Layer 3: Data Grid (Masked Dots) -->
-					<div
-						class="absolute inset-0 z-20 opacity-70 bg-[radial-gradient(#00f2ff_1.5px,transparent_1.5px)] [background-size:10px_10px]"
-						style="
-							mask-image: radial-gradient(circle 200px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 80%);
-							-webkit-mask-image: radial-gradient(circle 200px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 80%);
-						"
-					></div>
-
-					<!-- Layer 4: Border Glow (Scanner Effect) -->
-					<div
-						class="absolute inset-0 z-30 border-2 border-cyan-400 rounded-[2.5rem] opacity-100"
-						style="
-							mask-image: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 70%);
-							-webkit-mask-image: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 70%);
-						"
 					></div>
 				{/if}
 			</div>
