@@ -189,22 +189,43 @@ body {
 }
 
 /* NOTE (2026-09): this site used to animate page transitions with the
-   View Transitions API — first a rotating-cube effect (perspective +
-   preserve-3d + translateZ + rotateY on the ::view-transition-*(root)
-   pseudo-elements), then a flatter rotateY+scale version, then a
-   translateX slide, then a rotateY "panel" built from a regular DOM
-   element instead of VT pseudo-elements (CubeOverlay.svelte). All of
-   these were red herrings: extensive testing showed the actual cause was
-   Chrome's GPU compositor getting corrupted by SvelteKit's client-side
-   navigation itself — repeated navigations (as few as 1-2 in some real
-   browsers) could freeze the page on a solid-black paint with correct
-   DOM/CSS underneath, independent of any transition/animation code (it
-   reproduced with transitions fully disabled and backdrop-filter removed
-   sitewide). The fix was structural, not visual: <body data-sveltekit-reload>
-   in app.html now forces every section navigation to be a full page
-   reload instead of a SPA transition, so there's no accumulating
-   compositor state to corrupt. There is no page-transition CSS here
-   anymore as a result. Don't reintroduce a View-Transitions-based or
-   DOM-panel-based page transition without re-confirming this GPU bug is
-   actually gone — a single clean test isn't enough; it needed very few
-   navigations to trigger on real hardware. */
+   View Transitions API driven by SvelteKit's client-side router — first a
+   rotating-cube effect (perspective + preserve-3d + translateZ + rotateY
+   on the ::view-transition-*(root) pseudo-elements), then a flatter
+   rotateY+scale version, then a translateX slide, then a rotateY "panel"
+   built from a regular DOM element instead (CubeOverlay.svelte), then a
+   DOM-based tile-flip reveal (PageRevealOverlay.svelte). Extensive
+   testing showed the actual cause of the black-screen bug was Chrome's
+   GPU compositor getting corrupted by repeated SvelteKit client-side
+   navigation itself (as few as 1-2 navigations on some real hardware),
+   independent of any transition/animation code. The fix was structural:
+   <body data-sveltekit-reload> in app.html now forces every section
+   navigation to be a full page reload, so there's no accumulating
+   compositor state to corrupt.
+
+   The @view-transition rule below is a DIFFERENT, browser-native
+   mechanism — Cross-Document View Transitions — that runs across real
+   full navigations (not SvelteKit's client-side router), so it doesn't
+   reintroduce the accumulation pattern that caused the bug. It uses only
+   the browser's default opacity crossfade (no custom transform/rotate/
+   scale on the pseudo-elements), which is the more conservative half of
+   what was tested. Still, re-verify with a fresh-tab, multi-navigation
+   repro pass before adding anything beyond opacity here. */
+@view-transition {
+	navigation: auto;
+}
+
+::view-transition-old(root) {
+	animation-duration: 0.45s;
+	animation-timing-function: ease;
+}
+::view-transition-new(root) {
+	animation-duration: 0.5s;
+	animation-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	@view-transition {
+		navigation: none;
+	}
+}

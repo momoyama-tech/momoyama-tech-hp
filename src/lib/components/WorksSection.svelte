@@ -4,6 +4,7 @@
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { spotlight } from '$lib/actions/spotlight.js';
+	import { revealOnScroll } from '$lib/actions/revealOnScroll.js';
 	import { localize } from '$lib/i18n/localize.svelte.js';
 
 	const jp = {
@@ -84,7 +85,7 @@
 
 	<div class="mx-auto max-w-7xl px-6 sm:px-8 lg:px-12 relative z-10">
 		<!-- Section Header -->
-		<div class="mb-16">
+		<div class="reveal-fade-up mb-16" use:revealOnScroll>
 			<div class="mb-3">
 				<p class="font-mono text-xs tracking-[0.25em] text-cyan-600 dark:text-cyan-400 uppercase font-semibold">
 					Selected Works & Archives
@@ -112,7 +113,8 @@
 				{@const isOpen = activeId === item.id}
 				<div
 					use:spotlight
-					class="group relative border-t border-black/10 dark:border-white/10 transition-colors duration-300 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] overflow-hidden"
+					use:revealOnScroll={{ delay: Math.min(idx, 4) * 70 }}
+					class="reveal-fade-up group relative border-t border-black/10 dark:border-white/10 transition-colors duration-300 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] overflow-hidden"
 				>
 					<!-- Mouse-following Spotlight Layer -->
 					<div
@@ -201,3 +203,17 @@
 		</div>
 	</div>
 </section>
+
+<style>
+	.reveal-fade-up {
+		opacity: 0;
+		transform: translateY(28px);
+	}
+	:global(.reveal-fade-up.is-revealed) {
+		opacity: 1;
+		transform: translateY(0);
+		transition:
+			opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+			transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+	}
+</style>

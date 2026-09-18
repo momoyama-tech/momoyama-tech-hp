@@ -12,6 +12,13 @@
 	import Mail from 'lucide-svelte/icons/mail';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import ContactModal from '$lib/components/ContactModal.svelte';
+	import CodeTransition from '$lib/components/CodeTransition.svelte';
+	import BatteryDegradation from '$lib/components/BatteryDegradation.svelte';
+	import LiveViewers from '$lib/components/LiveViewers.svelte';
+	// Side-effect import: starts tracking the real cursor position from page
+	// load, so ContactForm's fake-cursor typing demo can start (and end) at
+	// wherever the visitor's actual mouse is, not an arbitrary point.
+	import '$lib/utils/mousePosition.js';
 	import { spring } from 'svelte/motion';
 	import { flushSync } from 'svelte';
 	import Loader2 from 'lucide-svelte/icons/loader-2';
@@ -636,8 +643,17 @@
 	</div>
 </footer>
 
+<!-- Fixed corner live-viewer count (see LiveViewers.svelte) -->
+<LiveViewers />
+
 <!-- Scan Line Overlay -->
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
+
+<!-- Per-navigation code-scramble transition (see CodeTransition.svelte) -->
+<CodeTransition />
+
+<!-- Real battery level visually degrades the UI (see BatteryDegradation.svelte) -->
+<BatteryDegradation />
 
 <!-- Contact modal + toast live at the layout root so their fixed overlays
      are not trapped under the page sections' stacking contexts -->

@@ -109,7 +109,10 @@
 	let blinkInterval;
 
 	onMount(() => {
-		// Start Animation Sequence
+		startTyping();
+	});
+
+	function startTyping() {
 		const TYPE_SPEED = 35;
 		const TYPE_VARIANCE = 15;
 		const COMMA_PAUSE = 100;
@@ -169,12 +172,7 @@
 		}
 
 		setTimeout(loop, 500);
-
-		return () => {
-			if (typingInterval) clearTimeout(typingInterval);
-			if (blinkInterval) clearInterval(blinkInterval);
-		};
-	});
+	}
 
 	// Cleanup on destroy
 	onDestroy(() => {

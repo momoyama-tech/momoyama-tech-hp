@@ -9,11 +9,32 @@
 	import { translationStore } from '$lib/stores/translation.svelte.js';
 
 	let visible = $state(false);
+	/** @type {HTMLElement | undefined} */
+	let sectionEl = $state();
 
 	let t = $derived(translations[/** @type {'JP'|'EN'} */ (language.current)]);
 
+	// Scroll-triggered rather than mount-triggered: previously this fired
+	// the moment the component was created, so on any page where the
+	// section starts below the fold, the whole fly-in entrance played
+	// off-screen and was wasted. One-shot IntersectionObserver instead,
+	// matching the pattern used across the rest of the site's reveals.
 	onMount(() => {
-		visible = true;
+		if (!sectionEl || typeof IntersectionObserver === 'undefined') {
+			visible = true;
+			return;
+		}
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					visible = true;
+					observer.disconnect();
+				}
+			},
+			{ threshold: 0.15, rootMargin: '0px 0px -10% 0px' }
+		);
+		observer.observe(sectionEl);
+		return () => observer.disconnect();
 	});
 
 	/** @type {{ title: string, description: string, iconType: 'cog' | 'palette' | 'sparkles' }[]} */
@@ -91,7 +112,7 @@
 	});
 </script>
 
-<section id="about" class="py-24" style="background: transparent;">
+<section id="about" class="py-24" style="background: transparent;" bind:this={sectionEl}>
 	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 		{#if visible}
 			<div class="mb-16">

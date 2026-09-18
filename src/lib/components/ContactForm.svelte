@@ -3,8 +3,10 @@
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import CheckCircle2 from 'lucide-svelte/icons/check-circle-2';
 	import AlertCircle from 'lucide-svelte/icons/alert-circle';
+	import { onDestroy } from 'svelte';
 	import { localize } from '$lib/i18n/localize.svelte.js';
 	import { submitInquiry } from '$lib/contact.js';
+	import { getMousePosition } from '$lib/utils/mousePosition.js';
 
 	/**
 	 * @type {{
@@ -74,14 +76,182 @@
 	let status = $state('idle');
 	let errorMessage = $state('');
 
-	// Pre-fill when opened from a specific service card.
+	/** @type {HTMLTextAreaElement | undefined} */
+	let messageEl = $state();
+	/** @type {HTMLDivElement | undefined} */
+	let fakeCursorEl;
+
+	// Pre-fill when opened from a specific service card. The fake cursor
+	// starts exactly where the visitor's real cursor is (tracked globally
+	// by mousePosition.js since page load), travels down to the message
+	// box, "clicks" in, stays resting there while the message types itself
+	// out character by character, then travels back to wherever the real
+	// cursor is by then and fades out. The real OS cursor is hidden
+	// (`cursor: none` on <body>) for the whole sequence — a page can't
+	// actually move the real cursor, so the only way this reads as "your
+	// own cursor did this" rather than a second pointer next to yours is to
+	// make sure yours isn't visibly sitting there at the same time; it
+	// reappears the instant the fake one fades out, at the same spot.
+	//
+	// The cursor element is created here and appended straight to
+	// `document.body`, NOT placed in the template — ContactModal's panel
+	// has `backdrop-blur-2xl`, and `backdrop-filter` on an ancestor creates
+	// a new containing block for `position: fixed` descendants, silently
+	// turning "fixed to the viewport" into "fixed to that panel" instead.
+	// A cursor templated inside the modal was landing at the wrong spot
+	// and getting clipped by the panel's own bounds — appending directly
+	// to body sidesteps that entirely.
+	//
+	// Positioned with `left`/`top` (not `transform`) and moved via
+	// requestAnimationFrame, not CSS @keyframes — see the note in
+	// BatteryDegradation.svelte for why this codebase avoids both for
+	// anything on a repeating/JS-driven timer.
 	let primed = $state(false);
+	let typingCancelled = false;
+
+	function ensureFakeCursor() {
+		if (fakeCursorEl || typeof document === 'undefined') return fakeCursorEl;
+		const el = document.createElement('div');
+		el.setAttribute('aria-hidden', 'true');
+		el.style.cssText =
+			'position:fixed;left:0;top:0;z-index:10001;opacity:0;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.35));';
+		el.innerHTML =
+			'<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M2 1.5 L2 14.5 L5.5 11.5 L7.8 16.2 L9.6 15.3 L7.3 10.6 L11.8 10.2 Z" fill="#111827" stroke="white" stroke-width="1.2" stroke-linejoin="round" /></svg>';
+		document.body.appendChild(el);
+		fakeCursorEl = el;
+		return el;
+	}
 	$effect(() => {
 		if (initialContext && !primed) {
-			message = `「${initialContext}」について相談したいです。\n\n`;
-			serviceType = guessCategory(initialContext);
 			primed = true;
+			serviceType = guessCategory(initialContext);
+			const fullText = `「${initialContext}」について相談したいです。\n\n`;
+			moveCursorThenType(fullText);
 		}
+	});
+
+	/**
+	 * @param {{ x: number, y: number }} from
+	 * @param {{ x: number, y: number }} to
+	 * @param {number} duration
+	 * @param {() => void} onDone
+	 */
+	function animateCursor(from, to, duration, onDone) {
+		if (!fakeCursorEl) {
+			onDone();
+			return;
+		}
+		const cursor = fakeCursorEl;
+		const start = performance.now();
+
+		/** @param {number} now */
+		function move(now) {
+			if (typingCancelled) return;
+			const p = Math.min(1, (now - start) / duration);
+			const eased = 1 - Math.pow(1 - p, 3);
+			cursor.style.left = `${from.x + (to.x - from.x) * eased}px`;
+			cursor.style.top = `${from.y + (to.y - from.y) * eased}px`;
+			if (p < 1) {
+				requestAnimationFrame(move);
+			} else {
+				onDone();
+			}
+		}
+		requestAnimationFrame(move);
+	}
+
+	function moveCursorThenType(/** @type {string} */ fullText) {
+		const reduceMotion =
+			typeof window !== 'undefined' &&
+			window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const cursor = reduceMotion ? undefined : ensureFakeCursor();
+		if (!cursor || !messageEl) {
+			typeMessage(fullText, () => {});
+			return;
+		}
+		const home = getMousePosition();
+		const endRect = messageEl.getBoundingClientRect();
+		const target = { x: endRect.left + 28, y: endRect.top + 22 };
+
+		// Hide the real OS cursor for the whole sequence — a page can't
+		// actually move it, so the only way this reads as "your own cursor"
+		// rather than a second pointer sitting next to yours is to make sure
+		// yours isn't visibly there at the same time. A plain
+		// `body.style.cursor` doesn't reach far enough: buttons, links and
+		// inputs all set their own explicit `cursor` (Tailwind's
+		// cursor-pointer etc.), which has higher specificity than anything
+		// inherited from body and was still showing the real cursor
+		// whenever it crossed one of those — hence the class + `!important`
+		// override below, same pattern as CodeTransition's font-family
+		// override.
+		document.body.classList.add('cf-cursor-hidden');
+		cursor.style.left = `${home.x}px`;
+		cursor.style.top = `${home.y}px`;
+		cursor.style.opacity = '1';
+
+		animateCursor(home, target, 550, () => {
+			if (typingCancelled) return;
+			// A quick two-step opacity pulse reads as a click, without
+			// touching transform/scale.
+			cursor.style.opacity = '0.35';
+			setTimeout(() => {
+				if (typingCancelled) return;
+				cursor.style.opacity = '1';
+				setTimeout(() => {
+					if (typingCancelled) return;
+					typeMessage(fullText, () => {
+						if (typingCancelled || !fakeCursorEl) return;
+						// Head back to wherever the real cursor actually is
+						// now (the visitor may have moved it while typing
+						// played out), then fade out and hand the real
+						// cursor back — right where the fake one left off.
+						const returnTo = getMousePosition();
+						animateCursor(target, returnTo, 450, () => {
+							if (fakeCursorEl) fakeCursorEl.style.opacity = '0';
+							document.body.classList.remove('cf-cursor-hidden');
+						});
+					});
+				}, 90);
+			}, 90);
+		});
+	}
+
+	/**
+	 * @param {string} fullText
+	 * @param {() => void} onDone
+	 */
+	function typeMessage(fullText, onDone) {
+		message = '';
+		messageEl?.focus();
+		let i = 0;
+
+		function step() {
+			if (typingCancelled) return;
+			i++;
+			message = fullText.slice(0, i);
+			if (i >= fullText.length) {
+				onDone();
+				return;
+			}
+			const justTyped = fullText[i - 1];
+			let delay = 26 + Math.random() * 24;
+			if (justTyped === '」' || justTyped === '、') delay += 160;
+			setTimeout(step, delay);
+		}
+		step();
+	}
+
+	onDestroy(() => {
+		typingCancelled = true;
+		// Guarantee the real cursor comes back even if the modal is closed
+		// mid-sequence, before the normal fade-out step ever runs. onDestroy
+		// also fires during SSR (where there's no `document`), so this must
+		// stay guarded.
+		if (typeof document !== 'undefined') {
+			document.body.classList.remove('cf-cursor-hidden');
+		}
+		fakeCursorEl?.remove();
+		fakeCursorEl = undefined;
 	});
 
 	function reset() {
@@ -267,6 +437,7 @@
 				rows="5"
 				placeholder={c.value.ph.message}
 				bind:value={message}
+				bind:this={messageEl}
 				class="{fieldClass} resize-none"
 			></textarea>
 		</div>
@@ -297,3 +468,14 @@
 		</button>
 	</form>
 {/if}
+
+<style>
+	/* `!important` + `*` because buttons/links/inputs all set their own
+	   explicit `cursor` (Tailwind's cursor-pointer etc.), which otherwise
+	   overrides a plain inherited `cursor: none` on body — leaving the real
+	   cursor visible next to the fake one whenever it crossed one. */
+	:global(body.cf-cursor-hidden),
+	:global(body.cf-cursor-hidden *) {
+		cursor: none !important;
+	}
+</style>

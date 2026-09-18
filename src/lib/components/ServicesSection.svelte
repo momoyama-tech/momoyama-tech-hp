@@ -10,6 +10,7 @@
 	import Sparkles from 'lucide-svelte/icons/sparkles';
 	import Users from 'lucide-svelte/icons/users';
 	import { spotlight } from '$lib/actions/spotlight.js';
+	import { revealOnScroll } from '$lib/actions/revealOnScroll.js';
 	import { localize } from '$lib/i18n/localize.svelte.js';
 
 	const jp = {
@@ -105,7 +106,8 @@
 			<!-- Card 1: Web・システム開発 (2カラム大型カード) -->
 			<div
 				use:spotlight
-				class="group relative md:col-span-2 flex flex-col justify-between p-8 sm:p-10 rounded-2xl bg-white/70 dark:bg-[#141414]/90 border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/30 backdrop-blur-md transition-all duration-500 hover:shadow-[0_0_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden"
+				use:revealOnScroll={{ delay: 0 }}
+				class="reveal-fade-up group relative md:col-span-2 flex flex-col justify-between p-8 sm:p-10 rounded-2xl bg-white/70 dark:bg-[#141414]/90 border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/30 backdrop-blur-md transition-all duration-500 hover:shadow-[0_0_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden"
 			>
 				<!-- Mouse-following Spotlight Layer -->
 				<div
@@ -191,7 +193,8 @@
 			<!-- Card 2: プロジェクションマッピング・映像 (1カラム強調カード) -->
 			<div
 				use:spotlight
-				class="group relative flex flex-col justify-between p-8 sm:p-10 rounded-2xl bg-white/70 dark:bg-[#141414]/90 border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/30 backdrop-blur-md transition-all duration-500 hover:shadow-[0_0_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden"
+				use:revealOnScroll={{ delay: 80 }}
+				class="reveal-fade-up group relative flex flex-col justify-between p-8 sm:p-10 rounded-2xl bg-white/70 dark:bg-[#141414]/90 border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/30 backdrop-blur-md transition-all duration-500 hover:shadow-[0_0_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden"
 			>
 				<div
 					class="absolute inset-0 pointer-events-none rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -253,7 +256,8 @@
 			<!-- Card 3: プログラミング教育・ワークショップ (1カラムコンパクトカード) -->
 			<div
 				use:spotlight
-				class="group relative flex flex-col justify-between p-8 sm:p-10 rounded-2xl bg-white/70 dark:bg-[#141414]/90 border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/30 backdrop-blur-md transition-all duration-500 hover:shadow-[0_0_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden"
+				use:revealOnScroll={{ delay: 160 }}
+				class="reveal-fade-up group relative flex flex-col justify-between p-8 sm:p-10 rounded-2xl bg-white/70 dark:bg-[#141414]/90 border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/30 backdrop-blur-md transition-all duration-500 hover:shadow-[0_0_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden"
 			>
 				<div
 					class="absolute inset-0 pointer-events-none rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -315,7 +319,8 @@
 			<!-- Card 4: 学生主導プロジェクト・共同開発 (2カラム大型カード) -->
 			<div
 				use:spotlight
-				class="group relative md:col-span-2 flex flex-col justify-between p-8 sm:p-10 rounded-2xl bg-white/70 dark:bg-[#141414]/90 border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/30 backdrop-blur-md transition-all duration-500 hover:shadow-[0_0_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden"
+				use:revealOnScroll={{ delay: 240 }}
+				class="reveal-fade-up group relative md:col-span-2 flex flex-col justify-between p-8 sm:p-10 rounded-2xl bg-white/70 dark:bg-[#141414]/90 border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/30 backdrop-blur-md transition-all duration-500 hover:shadow-[0_0_30px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_0_30px_rgba(0,0,0,0.5)] overflow-hidden"
 			>
 				<div
 					class="absolute inset-0 pointer-events-none rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -399,7 +404,10 @@
 			</div>
 			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				{#each c.value.flow as f, i}
-					<div class="relative rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] p-5">
+					<div
+						use:revealOnScroll={{ delay: i * 80 }}
+						class="reveal-fade-up relative rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03] p-5"
+					>
 						<span class="font-mono text-xs font-bold text-cyan-600 dark:text-cyan-400">{f.step}</span>
 						<h4 class="mt-2 text-sm font-bold tracking-tight text-[#1D1D1F] dark:text-white">
 							{f.title}
@@ -418,7 +426,8 @@
 		<!-- Closing CTA -->
 		<div
 			use:spotlight
-			class="group relative mt-16 overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-[#141414] dark:bg-[#141414] p-8 sm:p-12 text-center"
+			use:revealOnScroll
+			class="reveal-fade-up group relative mt-16 overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-[#141414] dark:bg-[#141414] p-8 sm:p-12 text-center"
 		>
 			<div
 				class="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -455,3 +464,21 @@
 		</div>
 	</div>
 </section>
+
+<style>
+	/* Scroll-triggered entrance. The class flip itself is instant (added by
+	   revealOnScroll on intersection, optionally after a JS setTimeout stagger
+	   — never via CSS transition-delay, so it can't leak into this element's
+	   other `transition-all` hover rules); only opacity/transform animate. */
+	.reveal-fade-up {
+		opacity: 0;
+		transform: translateY(28px);
+	}
+	:global(.reveal-fade-up.is-revealed) {
+		opacity: 1;
+		transform: translateY(0);
+		transition:
+			opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+			transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+	}
+</style>

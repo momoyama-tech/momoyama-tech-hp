@@ -2,6 +2,7 @@
 	import { fly, scale, fade } from 'svelte/transition';
 	import { cubicOut, quintOut } from 'svelte/easing';
 	import { spring } from 'svelte/motion';
+	import { onMount } from 'svelte';
 	// Direct imports to avoid SSR issues
 	import Cog from 'lucide-svelte/icons/cog';
 	import Palette from 'lucide-svelte/icons/palette';
@@ -17,6 +18,33 @@
 	let rotateY = $state(0);
 	let mouseX = $state(0);
 	let mouseY = $state(0);
+
+	// Each card's decorative background — circuit traces (cog), grid +
+	// golden-ratio spiral (palette), particle grid (sparkles) — used to be
+	// invisible or barely-there until hover, so on a page nobody hovers
+	// three cards at once, only one was ever doing anything. Now all three
+	// "power on" together the first time the row scrolls into view: the
+	// cog card's lines draw themselves in (stroke animating from fully
+	// hidden to fully traced — `pathLength="1"` normalizes every path to
+	// the same 0–1 range so one dasharray/dashoffset pair works for all of
+	// them without measuring each in JS), and the other two fade their
+	// background art in at a much more visible strength than the old
+	// hover-only opacity.
+	let revealed = $state(false);
+	onMount(() => {
+		if (!tileElement) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					revealed = true;
+					observer.disconnect();
+				}
+			},
+			{ threshold: 0.35 }
+		);
+		observer.observe(tileElement);
+		return () => observer.disconnect();
+	});
 
 	// Projector Spotlight Inertia
 	const spotlightPos = spring(
@@ -133,17 +161,40 @@
 		<!-- 1. Engineering: Circuit Diagram & Flowing Data (Preserved) -->
 		{#if iconType === 'cog'}
 			<div
-				class="absolute inset-0 z-0 opacity-0 transition-opacity duration-700 delay-100 ease-[cubic-bezier(0.23,1,0.32,1)]"
-				class:opacity-[0.15]={isHovered}
+				class="absolute inset-0 z-0 transition-opacity duration-700 delay-100 ease-[cubic-bezier(0.23,1,0.32,1)]"
+				class:opacity-0={!revealed}
+				class:opacity-[0.28]={revealed && !isHovered}
+				class:opacity-[0.45]={isHovered}
 			>
 				<svg
 					class="h-full w-full stroke-blue-900/60 dark:stroke-cyan-300/80"
 					style="stroke-width: 1.5px; fill: none; transform: translateX({-rotateY *
 						4}px) translateY({-rotateX * 4}px); transition: transform 0.1s; will-change: transform;"
 				>
-					<path d="M40 0 V60 H100 V120" stroke-dasharray="2 2" />
-					<path d="M160 340 V200 H240 V100" stroke-dasharray="2 2" />
-					<path d="M300 0 V150 H200" stroke-dasharray="2 2" />
+					<!-- Each path's dash length matches its exact axis-aligned
+					     total length (computable by hand since these are only
+					     V/H segments), so animating stroke-dashoffset from that
+					     length down to 0 "draws" the trace in, staggered per
+					     path for a sequential power-on feel, once the card
+					     first scrolls into view. -->
+					<path
+						d="M40 0 V60 H100 V120"
+						style="stroke-dasharray: 180; stroke-dashoffset: {revealed
+							? 0
+							: 180}; transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0s;"
+					/>
+					<path
+						d="M160 340 V200 H240 V100"
+						style="stroke-dasharray: 320; stroke-dashoffset: {revealed
+							? 0
+							: 320}; transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.15s;"
+					/>
+					<path
+						d="M300 0 V150 H200"
+						style="stroke-dasharray: 250; stroke-dashoffset: {revealed
+							? 0
+							: 250}; transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.3s;"
+					/>
 					<circle cx="100" cy="120" r="3" class="fill-blue-900/60 dark:fill-cyan-300/80" />
 					<circle cx="240" cy="100" r="3" class="fill-blue-900/60 dark:fill-cyan-300/80" />
 					<circle cx="200" cy="150" r="3" class="fill-blue-900/60 dark:fill-cyan-300/80" />
@@ -219,11 +270,12 @@
 		<!-- 2. Design: UI Grid & Golden Ratio (Palette) -->
 		{#if iconType === 'palette'}
 			<div
-				class="absolute inset-0 z-0 opacity-0 transition-opacity duration-700 ease-out"
-				class:opacity-[0.1]={!isHovered}
-				class:opacity-[0.3]={isHovered}
+				class="absolute inset-0 z-0 transition-opacity duration-700 ease-out"
+				class:opacity-0={!revealed}
+				class:opacity-[0.28]={revealed && !isHovered}
+				class:opacity-[0.5]={isHovered}
 			>
-				{#if isHovered}
+				{#if revealed}
 					<!-- Golden Ratio & Grid -->
 					<svg
 						class="absolute inset-0 h-full w-full stroke-blue-500/40 dark:stroke-white/30"
@@ -250,14 +302,19 @@
 		<!-- 3. Creative Tech: Particles & Projector (Sparkles) -->
 		{#if iconType === 'sparkles'}
 			<div class="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[2.5rem]">
-				<!-- Layer 1: Base Grid (Faint, Static) -->
+				<!-- Layer 1: Base Grid — faint by default, but boosted once the
+				     card has scrolled into view so this card visibly "powers
+				     on" alongside the other two instead of staying dim until
+				     someone happens to hover it. -->
 				<div
-					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1.5px,transparent_1.5px)] [background-size:20px_20px] opacity-[0.05]"
+					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1.5px,transparent_1.5px)] [background-size:20px_20px] transition-opacity duration-700 ease-out"
+					class:opacity-[0.05]={!revealed}
+					class:opacity-[0.35]={revealed}
 					style="transform: translateX({-rotateY * 4}px) translateY({-rotateX *
-						4}px); transition: transform 0.1s; will-change: transform;"
+						4}px); transition: transform 0.1s, opacity 0.7s ease-out; will-change: transform;"
 				></div>
 
-				{#if isHovered}
+				{#if isHovered && theme.isSpotlightEnabled}
 					<!-- Layer 2: Scan Light (Inversion Effect) -->
 					<div
 						class="absolute inset-0 z-10 mix-blend-exclusion"
@@ -290,40 +347,6 @@
 					<div
 						class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-400 opacity-0 animate-single-pulse"
 						style="width: 0; height: 0;"
-					></div>
-				{/if}
-
-				<!-- Layer 1: Base Grid (Faint, Static) -->
-				<div
-					class="absolute inset-0 bg-[radial-gradient(#9ca3af_1.5px,transparent_1.5px)] [background-size:20px_20px] opacity-[0.05]"
-				></div>
-
-				{#if isHovered && theme.isSpotlightEnabled}
-					<!-- Layer 2: Scan Light (Inversion Effect) -->
-					<div
-						class="absolute inset-0 z-10 mix-blend-exclusion"
-						transition:fade={{ duration: 200 }}
-						style="
-							background: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, rgba(255, 255, 255, 0.3), transparent 100%);
-						"
-					></div>
-
-					<!-- Layer 3: Data Grid (Masked Dots) -->
-					<div
-						class="absolute inset-0 z-20 opacity-70 bg-[radial-gradient(#00f2ff_1.5px,transparent_1.5px)] [background-size:10px_10px]"
-						style="
-							mask-image: radial-gradient(circle 200px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 80%);
-							-webkit-mask-image: radial-gradient(circle 200px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 80%);
-						"
-					></div>
-
-					<!-- Layer 4: Border Glow (Scanner Effect) -->
-					<div
-						class="absolute inset-0 z-30 border-2 border-cyan-400 rounded-[2.5rem] opacity-100"
-						style="
-							mask-image: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 70%);
-							-webkit-mask-image: radial-gradient(circle 250px at {$spotlightPos.x}px {$spotlightPos.y}px, black, transparent 70%);
-						"
 					></div>
 				{/if}
 			</div>
