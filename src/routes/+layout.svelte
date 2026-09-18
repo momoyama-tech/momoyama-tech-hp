@@ -14,7 +14,7 @@
 	import ContactModal from '$lib/components/ContactModal.svelte';
 	import CodeTransition from '$lib/components/CodeTransition.svelte';
 	import BatteryDegradation from '$lib/components/BatteryDegradation.svelte';
-	import VisitorCounter from '$lib/components/VisitorCounter.svelte';
+	import LiveViewers from '$lib/components/LiveViewers.svelte';
 	// Side-effect import: starts tracking the real cursor position from page
 	// load, so ContactForm's fake-cursor typing demo can start (and end) at
 	// wherever the visitor's actual mouse is, not an arbitrary point.
@@ -643,8 +643,8 @@
 	</div>
 </footer>
 
-<!-- Fixed corner visitor counter (see VisitorCounter.svelte) -->
-<VisitorCounter />
+<!-- Fixed corner live-viewer count (see LiveViewers.svelte) -->
+<LiveViewers />
 
 <!-- Scan Line Overlay -->
 <div class="scan-line-overlay" class:scan-line-active={theme.isScanLineActive}></div>
