@@ -4,6 +4,7 @@
 	// Direct import to avoid SSR issues
 	import ExternalLink from 'lucide-svelte/icons/external-link';
 	import { theme } from '$lib/stores/theme.svelte.js';
+	import { revealOnScroll } from '$lib/actions/revealOnScroll.js';
 
 	/**
 	 * @type {{
@@ -62,9 +63,10 @@
 	target="_blank"
 	rel="noopener noreferrer"
 	bind:this={cardElement}
+	use:revealOnScroll
 	onmousemove={handleMouseMove}
 	onmouseleave={handleMouseLeave}
-	class="project-card group block overflow-hidden rounded-3xl transition-all duration-500 hover:-translate-y-2 dark:bg-zinc-900/40 dark:border-white/10 dark:backdrop-blur-xl dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] relative"
+	class="project-card reveal-fade-up group block overflow-hidden rounded-3xl transition-all duration-500 hover:-translate-y-2 dark:bg-zinc-900/40 dark:border-white/10 dark:backdrop-blur-xl dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] relative"
 	class:border-glow={theme.isScanLineActive}
 	style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(50px); border: 1px solid rgba(243, 244, 246, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);"
 >
@@ -171,6 +173,17 @@
 <style>
 	.project-card {
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+	}
+
+	/* Opacity-only reveal (no transform) — this card already animates
+	   `transform` on hover via Tailwind's hover:-translate-y-2, and adding
+	   a second, competing transform source here risked fighting that. */
+	.reveal-fade-up {
+		opacity: 0;
+	}
+	:global(.reveal-fade-up.is-revealed) {
+		opacity: 1;
+		transition: opacity 0.6s ease-out;
 	}
 
 	.project-card:hover {
