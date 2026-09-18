@@ -86,9 +86,13 @@
 	// by mousePosition.js since page load), travels down to the message
 	// box, "clicks" in, stays resting there while the message types itself
 	// out character by character, then travels back to wherever the real
-	// cursor is by then and fades out — so it reads as "your own cursor
-	// did this," not a second pointer that appeared from nowhere and left
-	// mid-air. Positioned with `left`/`top` (not `transform`) and moved via
+	// cursor is by then and fades out. The real OS cursor is hidden
+	// (`cursor: none` on <body>) for the whole sequence — a page can't
+	// actually move the real cursor, so the only way this reads as "your
+	// own cursor did this" rather than a second pointer next to yours is to
+	// make sure yours isn't visibly sitting there at the same time; it
+	// reappears the instant the fake one fades out, at the same spot.
+	// Positioned with `left`/`top` (not `transform`) and moved via
 	// requestAnimationFrame, not CSS @keyframes — see the note in
 	// BatteryDegradation.svelte for why this codebase avoids both for
 	// anything on a repeating/JS-driven timer.
@@ -146,6 +150,11 @@
 		const endRect = messageEl.getBoundingClientRect();
 		const target = { x: endRect.left + 28, y: endRect.top + 22 };
 
+		// Hide the real OS cursor for the whole sequence — a page can't
+		// actually move it, so the only way this reads as "your own cursor"
+		// rather than a second pointer sitting next to yours is to make sure
+		// yours isn't visibly there at the same time.
+		document.body.style.cursor = 'none';
 		cursor.style.left = `${home.x}px`;
 		cursor.style.top = `${home.y}px`;
 		cursor.style.opacity = '1';
@@ -164,10 +173,12 @@
 						if (typingCancelled || !fakeCursorEl) return;
 						// Head back to wherever the real cursor actually is
 						// now (the visitor may have moved it while typing
-						// played out), then fade out on arrival.
+						// played out), then fade out and hand the real
+						// cursor back — right where the fake one left off.
 						const returnTo = getMousePosition();
 						animateCursor(target, returnTo, 450, () => {
 							if (fakeCursorEl) fakeCursorEl.style.opacity = '0';
+							document.body.style.cursor = '';
 						});
 					});
 				}, 90);
@@ -202,6 +213,9 @@
 
 	onDestroy(() => {
 		typingCancelled = true;
+		// Guarantee the real cursor comes back even if the modal is closed
+		// mid-sequence, before the normal fade-out step ever runs.
+		document.body.style.cursor = '';
 	});
 
 	function reset() {
