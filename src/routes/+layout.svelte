@@ -14,6 +14,7 @@
 	import ContactModal from '$lib/components/ContactModal.svelte';
 	import CodeTransition from '$lib/components/CodeTransition.svelte';
 	import BatteryDegradation from '$lib/components/BatteryDegradation.svelte';
+	import VisitorCounter from '$lib/components/VisitorCounter.svelte';
 	// Side-effect import: starts tracking the real cursor position from page
 	// load, so ContactForm's fake-cursor typing demo can start (and end) at
 	// wherever the visitor's actual mouse is, not an arbitrary point.
@@ -638,6 +639,9 @@
 				{t.footer.copy}
 				{t.footer.rights}
 			</p>
+			<div class="mt-3">
+				<VisitorCounter />
+			</div>
 		</div>
 	</div>
 </footer>

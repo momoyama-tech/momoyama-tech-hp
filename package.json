@@ -54,6 +54,7 @@
 		"vitest-browser-svelte": "^2.0.1"
 	},
 	"dependencies": {
+		"@netlify/blobs": "^11.1.0",
 		"@notionhq/client": "^2.3.0",
 		"google-translate-api-x": "^10.7.2",
 		"lucide-svelte": "^0.563.0",
