@@ -149,7 +149,7 @@
 			const wobblePhase = Math.random() * Math.PI * 2;
 			// Faint enough to sit in the background rather than draw the eye
 			// — count carries the "fizzing" feel now, not individual opacity.
-			const baseOpacity = Math.min(0.32, 0.14 + intensity * 0.16);
+			const baseOpacity = Math.min(0.4, 0.2 + intensity * 0.18);
 
 			/** @param {number} now */
 			function rise(now) {
