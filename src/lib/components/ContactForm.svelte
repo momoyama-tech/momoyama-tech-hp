@@ -3,6 +3,7 @@
 	import Loader2 from 'lucide-svelte/icons/loader-2';
 	import CheckCircle2 from 'lucide-svelte/icons/check-circle-2';
 	import AlertCircle from 'lucide-svelte/icons/alert-circle';
+	import { onDestroy } from 'svelte';
 	import { localize } from '$lib/i18n/localize.svelte.js';
 	import { submitInquiry } from '$lib/contact.js';
 
@@ -74,14 +75,44 @@
 	let status = $state('idle');
 	let errorMessage = $state('');
 
-	// Pre-fill when opened from a specific service card.
+	/** @type {HTMLTextAreaElement | undefined} */
+	let messageEl = $state();
+
+	// Pre-fill when opened from a specific service card — typed out
+	// character by character (real keyboard-input pacing, not an instant
+	// pop-in) so it reads as "this is being filled in for you" rather than
+	// content that was just always there.
 	let primed = $state(false);
+	let typingCancelled = false;
 	$effect(() => {
 		if (initialContext && !primed) {
-			message = `「${initialContext}」について相談したいです。\n\n`;
-			serviceType = guessCategory(initialContext);
 			primed = true;
+			serviceType = guessCategory(initialContext);
+			typeMessage(`「${initialContext}」について相談したいです。\n\n`);
 		}
+	});
+
+	/** @param {string} fullText */
+	function typeMessage(fullText) {
+		message = '';
+		messageEl?.focus();
+		let i = 0;
+
+		function step() {
+			if (typingCancelled) return;
+			i++;
+			message = fullText.slice(0, i);
+			if (i >= fullText.length) return;
+			const justTyped = fullText[i - 1];
+			let delay = 26 + Math.random() * 24;
+			if (justTyped === '」' || justTyped === '、') delay += 160;
+			setTimeout(step, delay);
+		}
+		step();
+	}
+
+	onDestroy(() => {
+		typingCancelled = true;
 	});
 
 	function reset() {
@@ -267,6 +298,7 @@
 				rows="5"
 				placeholder={c.value.ph.message}
 				bind:value={message}
+				bind:this={messageEl}
 				class="{fieldClass} resize-none"
 			></textarea>
 		</div>
