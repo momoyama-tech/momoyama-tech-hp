@@ -9,12 +9,11 @@
 	// than "low power" — noise should degrade the chrome, not the content
 	// someone's trying to read.
 	//
-	// Charging is treated as a genuinely different state, not just a
-	// dampened version of "low battery": a small baseline effect is always
-	// present while plugged in (even near 100%, so the feature is actually
-	// visible on a laptop that's usually charging while in use), and
-	// instead of the jittery "breaking apart" look, shaped elements get a
-	// gentle cyan glow pulse — reads as energy flowing in, not corruption.
+	// Charging is a genuinely different, unambiguous state rather than a
+	// dampened version of "low battery": small green bubbles rise up the
+	// screen like carbonation — a first version tried a cyan glow pulse on
+	// random cards instead, but that read as generic "something's
+	// happening" rather than specifically "charging," so it's gone.
 	//
 	// Battery Status API (navigator.getBattery) is Chromium-only — Firefox
 	// and Safari never shipped it (removed from the spec track over
@@ -30,10 +29,15 @@
 	// app's paint into a squeezed-into-one-corner render, the same failure
 	// class documented in layout.css for the old client-side-navigation
 	// bug. Direct style-property mutation via requestAnimationFrame (no
-	// @keyframes, no class-toggle-triggered animation) never reproduced it
-	// under the same stress test, so — same as textScramble.js — that's
-	// the only mechanism used for the repeating part of this effect.
+	// @keyframes, no class-toggle-triggered animation, and — for the
+	// bubbles — `bottom`/`margin-left` rather than `transform`, since
+	// transform was part of the combination that broke) never reproduced
+	// it under the same stress test, so that's the only mechanism used for
+	// the repeating parts of this effect, same as textScramble.js.
 	import { onMount } from 'svelte';
+
+	/** @type {HTMLDivElement | undefined} */
+	let bubbleLayer = $state();
 
 	onMount(() => {
 		const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -42,10 +46,14 @@
 		let cancelled = false;
 		let intensity = 0;
 		let charging = false;
+		let bubblesRunning = false;
+		let bubbleCount = 0;
 		/** @type {any} */
 		let battery;
 		/** @type {ReturnType<typeof setTimeout> | undefined} */
 		let glitchTimer;
+		/** @type {ReturnType<typeof setTimeout> | undefined} */
+		let bubbleTimer;
 
 		/** @param {number} level @param {boolean} isCharging */
 		function computeIntensity(level, isCharging) {
@@ -62,9 +70,12 @@
 		}
 
 		function update() {
+			const wasCharging = charging;
 			charging = battery.charging;
 			intensity = computeIntensity(battery.level, charging);
 			document.documentElement.style.setProperty('--battery-intensity', String(intensity));
+			if (charging && !wasCharging) startBubbles();
+			if (!charging && wasCharging) stopBubbles();
 		}
 
 		/** @param {Element} el */
@@ -114,43 +125,66 @@
 			requestAnimationFrame(jitter);
 		}
 
-		/** @param {HTMLElement} el */
-		function pulseOne(el) {
-			// The charging counterpart to jitterRandomShape: a smooth glow
-			// that breathes in and out instead of a jagged edge — "gaining
-			// power" should look and feel like the opposite of "corrupting."
-			const originalShadow = el.style.boxShadow;
+		function spawnBubble() {
+			if (!bubbleLayer) return;
+			// Moderate cap — enough to read as "continuously fizzing," not a
+			// wall of bubbles.
+			const maxBubbles = 4 + Math.round(intensity * 2);
+			if (bubbleCount >= maxBubbles) return;
+			bubbleCount++;
+
+			const bubble = document.createElement('div');
+			bubble.className = 'battery-bubble';
+			const size = 5 + Math.random() * 12;
+			bubble.style.width = `${size}px`;
+			bubble.style.height = `${size}px`;
+			bubble.style.left = `${4 + Math.random() * 92}%`;
+			bubble.style.bottom = '-16px';
+			bubbleLayer.appendChild(bubble);
+
 			const start = performance.now();
-			const duration = 1100;
-			const peak = Math.min(1, intensity + 0.3);
+			const duration = 4200 + Math.random() * 2600;
+			const wobbleAmp = 6 + Math.random() * 10;
+			const wobbleFreq = 1.2 + Math.random() * 1.3;
+			const wobblePhase = Math.random() * Math.PI * 2;
+			const baseOpacity = Math.min(0.85, 0.45 + intensity * 0.4);
 
 			/** @param {number} now */
-			function pulse(now) {
+			function rise(now) {
 				const p = Math.min(1, (now - start) / duration);
+				const travel = (window.innerHeight + 40) * p;
+				bubble.style.bottom = `${travel - 16}px`;
+				bubble.style.marginLeft = `${Math.sin(p * Math.PI * 2 * wobbleFreq + wobblePhase) * wobbleAmp * (1 - p * 0.4)}px`;
+				const fade = p < 0.12 ? p / 0.12 : p > 0.82 ? (1 - p) / 0.18 : 1;
+				bubble.style.opacity = String(Math.max(0, Math.min(1, fade)) * baseOpacity);
 				if (p < 1) {
-					const envelope = Math.sin(p * Math.PI) * peak; // fade in, hold, fade out
-					el.style.boxShadow = `0 0 ${(26 * envelope).toFixed(1)}px ${(7 * envelope).toFixed(1)}px rgba(34, 211, 238, ${(0.85 * envelope).toFixed(2)})`;
-					requestAnimationFrame(pulse);
+					requestAnimationFrame(rise);
 				} else {
-					el.style.boxShadow = originalShadow;
+					bubble.remove();
+					bubbleCount--;
 				}
 			}
-			requestAnimationFrame(pulse);
+			requestAnimationFrame(rise);
 		}
 
-		function pulseRandomShapes() {
-			// More than one at a time while charging — a single 1.1s pulse on
-			// one random element, once every few seconds, is easy to miss
-			// entirely if you're not looking right at it.
-			const seen = new Set();
-			const count = 2 + Math.round(intensity);
-			for (let i = 0; i < count; i++) {
-				const el = randomShapeElement();
-				if (el && !seen.has(el)) {
-					seen.add(el);
-					pulseOne(el);
-				}
-			}
+		function scheduleBubbleSpawn() {
+			if (!bubblesRunning) return;
+			spawnBubble();
+			const delay = Math.max(700, 1700 - intensity * 900) + Math.random() * 400;
+			bubbleTimer = setTimeout(scheduleBubbleSpawn, delay);
+		}
+
+		function startBubbles() {
+			if (bubblesRunning) return;
+			bubblesRunning = true;
+			scheduleBubbleSpawn();
+		}
+
+		function stopBubbles() {
+			bubblesRunning = false;
+			if (bubbleTimer) clearTimeout(bubbleTimer);
+			// Bubbles already rising just finish their own rise() loop and
+			// remove themselves — no need to force-clear them.
 		}
 
 		function scheduleGlitch() {
@@ -158,13 +192,11 @@
 			// Otherwise: trigger more often the more intense it gets. Floor
 			// kept well above what stress-testing showed was safe, as margin
 			// for a mechanism that only gets exercised over a long real
-			// session, not a quick manual check.
+			// session, not a quick manual check. Charging is handled entirely
+			// by the bubble loop above, not this one.
 			const delay = intensity <= 0.02 ? 4000 : Math.max(1500, 5000 - intensity * 4000);
 			glitchTimer = setTimeout(() => {
-				if (intensity > 0.02) {
-					if (charging) pulseRandomShapes();
-					else jitterRandomShape();
-				}
+				if (intensity > 0.02 && !charging) jitterRandomShape();
 				scheduleGlitch();
 			}, delay);
 		}
@@ -186,6 +218,7 @@
 
 		return () => {
 			cancelled = true;
+			stopBubbles();
 			if (glitchTimer) clearTimeout(glitchTimer);
 			battery?.removeEventListener('levelchange', update);
 			battery?.removeEventListener('chargingchange', update);
@@ -195,6 +228,7 @@
 </script>
 
 <div class="battery-noise-overlay" aria-hidden="true"></div>
+<div class="battery-bubble-layer" bind:this={bubbleLayer} aria-hidden="true"></div>
 
 <style>
 	:global(:root) {
@@ -216,8 +250,30 @@
 		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='batteryNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23batteryNoise)'/%3E%3C/svg%3E");
 	}
 
+	.battery-bubble-layer {
+		position: fixed;
+		inset: 0;
+		z-index: 9993;
+		pointer-events: none;
+		overflow: hidden;
+	}
+
+	:global(.battery-bubble) {
+		position: absolute;
+		border-radius: 50%;
+		background: radial-gradient(
+			circle at 30% 25%,
+			rgba(220, 252, 231, 0.95),
+			rgba(74, 222, 128, 0.55) 55%,
+			rgba(21, 128, 61, 0.2) 100%
+		);
+		box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+		opacity: 0;
+	}
+
 	@media (prefers-reduced-motion: reduce) {
-		.battery-noise-overlay {
+		.battery-noise-overlay,
+		.battery-bubble-layer {
 			display: none;
 		}
 	}
