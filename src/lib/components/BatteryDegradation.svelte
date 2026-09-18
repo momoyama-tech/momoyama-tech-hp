@@ -9,13 +9,17 @@
 	// than "low power" — noise should degrade the chrome, not the content
 	// someone's trying to read.
 	//
-	// Charging shows a small corner readout: a ring that fills to the
-	// actual battery percentage, with the number in the middle. Two ambient
-	// attempts before this (a cyan glow pulse on random cards, then green
-	// bubbles rising like carbonation) both read as vague "something's
-	// happening" rather than specifically charging, and a literal
-	// battery-shaped icon after that showed charging unambiguously but not
-	// the actual level — this is the version that answers "how much."
+	// Charging shows a small corner readout: an ASCII-style terminal bar
+	// (`[▓▓▓▓▓▓▓▓░░] 78%`) that re-decrypts itself from scrambled
+	// characters into the real reading whenever the percentage changes —
+	// reusing textScramble.js, the same mechanism CodeTransition uses for
+	// page transitions, so this reads as the same visual language as the
+	// rest of the site instead of a new gimmick. Earlier attempts: a cyan
+	// glow pulse on random cards and green bubbles rising like carbonation
+	// both read as vague "something's happening" rather than specifically
+	// charging; a battery-shaped icon showed charging but not the level; a
+	// plain circular percentage ring showed the level but wasn't very
+	// distinctive. This version answers "how much" with more personality.
 	//
 	// Battery Status API (navigator.getBattery) is Chromium-only — Firefox
 	// and Safari never shipped it (removed from the spec track over
@@ -36,6 +40,7 @@
 	// mechanism used for the repeating parts of this effect, same as
 	// textScramble.js.
 	import { onMount } from 'svelte';
+	import { scrambleTransition } from '$lib/utils/textScramble.js';
 
 	/** @type {HTMLDivElement | undefined} */
 	let chargeBadge = $state();
@@ -67,44 +72,46 @@
 			return level >= 0.5 ? 0 : (0.5 - level) / 0.5;
 		}
 
-		const ringCircumference = 2 * Math.PI * 16; // matches the SVG circle's r=16
+		let lastRenderedPct = -1;
+		let cursorOn = true;
+		/** @type {ReturnType<typeof setInterval> | undefined} */
+		let cursorTimer;
 
-		function renderPercentage() {
+		function renderPercentage(force = false) {
 			if (!chargeBadge) return;
 			const pct = Math.round(battery.level * 100);
-			const ringEl = chargeBadge.querySelector('.battery-ring-fill');
-			const textEl = chargeBadge.querySelector('.battery-ring-text');
-			ringEl?.setAttribute('stroke-dashoffset', String(ringCircumference * (1 - pct / 100)));
-			if (textEl) textEl.textContent = `${pct}`;
+			if (pct === lastRenderedPct && !force) return;
+			lastRenderedPct = pct;
+			const found = chargeBadge.querySelector('.battery-ascii-readout');
+			if (!found) return;
+			const textEl = found;
+			const barLength = 10;
+			const filled = Math.round((pct / 100) * barLength);
+			textEl.textContent = `[${'▓'.repeat(filled)}${'░'.repeat(barLength - filled)}] ${pct}%`;
+			// Re-decrypts the whole readout from scrambled characters into
+			// the real reading — same animator CodeTransition uses, just
+			// pointed at this one small element instead of the whole page.
+			scrambleTransition(textEl, { direction: 'toReal', duration: 500 });
 		}
 
 		function startChargeBadge() {
 			if (chargeAnimRunning || !chargeBadge) return;
 			chargeAnimRunning = true;
 			chargeBadge.classList.add('battery-charge-badge-visible');
-			const found = chargeBadge.querySelector('.battery-ring-fill');
-			if (!found) return;
-			const ringEl = found;
-			const start = performance.now();
-			const cycleDuration = 2200;
+			lastRenderedPct = -1; // force a fresh decrypt-in on every appearance
+			renderPercentage(true);
 
-			/** @param {number} now */
-			function breathe(now) {
-				if (!chargeAnimRunning) return;
-				const p = ((now - start) % cycleDuration) / cycleDuration;
-				// A slow breathe on the ring's own opacity signals "actively
-				// charging" — the fill level itself only moves when the real
-				// battery level changes, via renderPercentage().
-				const envelope = 0.65 + Math.sin(p * Math.PI * 2) * 0.35;
-				ringEl.setAttribute('opacity', envelope.toFixed(2));
-				requestAnimationFrame(breathe);
-			}
-			requestAnimationFrame(breathe);
+			const cursorEl = chargeBadge.querySelector('.battery-cursor');
+			cursorTimer = setInterval(() => {
+				cursorOn = !cursorOn;
+				if (cursorEl) /** @type {HTMLElement} */ (cursorEl).style.opacity = cursorOn ? '1' : '0';
+			}, 530);
 		}
 
 		function stopChargeBadge() {
 			chargeAnimRunning = false;
 			chargeBadge?.classList.remove('battery-charge-badge-visible');
+			if (cursorTimer) clearInterval(cursorTimer);
 		}
 
 		function update() {
@@ -207,31 +214,7 @@
 <div class="battery-noise-overlay" aria-hidden="true"></div>
 
 <div class="battery-charge-badge" bind:this={chargeBadge} aria-hidden="true">
-	<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-		<circle cx="20" cy="20" r="16" fill="none" stroke="rgba(148, 163, 184, 0.28)" stroke-width="3" />
-		<circle
-			class="battery-ring-fill"
-			cx="20"
-			cy="20"
-			r="16"
-			fill="none"
-			stroke="#22c55e"
-			stroke-width="3"
-			stroke-linecap="round"
-			stroke-dasharray="100.53"
-			stroke-dashoffset="100.53"
-			transform="rotate(-90 20 20)"
-		/>
-		<text
-			class="battery-ring-text"
-			x="20"
-			y="24"
-			text-anchor="middle"
-			font-size="10"
-			font-family="'SF Mono', 'Menlo', 'Consolas', monospace"
-			fill="currentColor">--</text
-		>
-	</svg>
+	<span class="battery-ascii-readout"></span><span class="battery-cursor">_</span>
 </div>
 
 <style>
@@ -262,12 +245,24 @@
 		pointer-events: none;
 		opacity: 0;
 		transition: opacity 0.4s ease;
-		color: rgba(148, 163, 184, 0.9);
-		filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.15));
+		padding: 5px 9px;
+		border-radius: 6px;
+		background: rgba(5, 10, 15, 0.55);
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		backdrop-filter: blur(6px);
+		font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+		font-size: 11px;
+		letter-spacing: 0.02em;
+		color: #4ade80;
+		white-space: pre;
 	}
 
 	.battery-charge-badge:global(.battery-charge-badge-visible) {
 		opacity: 1;
+	}
+
+	.battery-cursor {
+		transition: opacity 0.15s ease;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
