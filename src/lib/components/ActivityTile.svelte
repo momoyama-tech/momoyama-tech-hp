@@ -2,6 +2,7 @@
 	import { fly, scale, fade } from 'svelte/transition';
 	import { cubicOut, quintOut } from 'svelte/easing';
 	import { spring } from 'svelte/motion';
+	import { onMount } from 'svelte';
 	// Direct imports to avoid SSR issues
 	import Cog from 'lucide-svelte/icons/cog';
 	import Palette from 'lucide-svelte/icons/palette';
@@ -17,6 +18,28 @@
 	let rotateY = $state(0);
 	let mouseX = $state(0);
 	let mouseY = $state(0);
+
+	// The circuit-board lines (cog card) "draw" themselves in — stroke
+	// animating from fully hidden to fully traced — the first time the
+	// card scrolls into view, rather than only ever appearing on hover.
+	// `pathLength="1"` normalizes every path to the same 0–1 range
+	// regardless of its actual geometry, so a single dasharray/dashoffset
+	// pair works for all of them without measuring each one in JS.
+	let circuitDrawn = $state(false);
+	onMount(() => {
+		if (iconType !== 'cog' || !tileElement) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) {
+					circuitDrawn = true;
+					observer.disconnect();
+				}
+			},
+			{ threshold: 0.35 }
+		);
+		observer.observe(tileElement);
+		return () => observer.disconnect();
+	});
 
 	// Projector Spotlight Inertia
 	const spotlightPos = spring(
@@ -133,7 +156,9 @@
 		<!-- 1. Engineering: Circuit Diagram & Flowing Data (Preserved) -->
 		{#if iconType === 'cog'}
 			<div
-				class="absolute inset-0 z-0 opacity-0 transition-opacity duration-700 delay-100 ease-[cubic-bezier(0.23,1,0.32,1)]"
+				class="absolute inset-0 z-0 transition-opacity duration-700 delay-100 ease-[cubic-bezier(0.23,1,0.32,1)]"
+				class:opacity-0={!circuitDrawn}
+				class:opacity-[0.08]={circuitDrawn && !isHovered}
 				class:opacity-[0.15]={isHovered}
 			>
 				<svg
@@ -141,9 +166,30 @@
 					style="stroke-width: 1.5px; fill: none; transform: translateX({-rotateY *
 						4}px) translateY({-rotateX * 4}px); transition: transform 0.1s; will-change: transform;"
 				>
-					<path d="M40 0 V60 H100 V120" stroke-dasharray="2 2" />
-					<path d="M160 340 V200 H240 V100" stroke-dasharray="2 2" />
-					<path d="M300 0 V150 H200" stroke-dasharray="2 2" />
+					<!-- Each path's dash length matches its exact axis-aligned
+					     total length (computable by hand since these are only
+					     V/H segments), so animating stroke-dashoffset from that
+					     length down to 0 "draws" the trace in, staggered per
+					     path for a sequential power-on feel, once the card
+					     first scrolls into view. -->
+					<path
+						d="M40 0 V60 H100 V120"
+						style="stroke-dasharray: 180; stroke-dashoffset: {circuitDrawn
+							? 0
+							: 180}; transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0s;"
+					/>
+					<path
+						d="M160 340 V200 H240 V100"
+						style="stroke-dasharray: 320; stroke-dashoffset: {circuitDrawn
+							? 0
+							: 320}; transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.15s;"
+					/>
+					<path
+						d="M300 0 V150 H200"
+						style="stroke-dasharray: 250; stroke-dashoffset: {circuitDrawn
+							? 0
+							: 250}; transition: stroke-dashoffset 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.3s;"
+					/>
 					<circle cx="100" cy="120" r="3" class="fill-blue-900/60 dark:fill-cyan-300/80" />
 					<circle cx="240" cy="100" r="3" class="fill-blue-900/60 dark:fill-cyan-300/80" />
 					<circle cx="200" cy="150" r="3" class="fill-blue-900/60 dark:fill-cyan-300/80" />
