@@ -153,8 +153,15 @@
 		// Hide the real OS cursor for the whole sequence — a page can't
 		// actually move it, so the only way this reads as "your own cursor"
 		// rather than a second pointer sitting next to yours is to make sure
-		// yours isn't visibly there at the same time.
-		document.body.style.cursor = 'none';
+		// yours isn't visibly there at the same time. A plain
+		// `body.style.cursor` doesn't reach far enough: buttons, links and
+		// inputs all set their own explicit `cursor` (Tailwind's
+		// cursor-pointer etc.), which has higher specificity than anything
+		// inherited from body and was still showing the real cursor
+		// whenever it crossed one of those — hence the class + `!important`
+		// override below, same pattern as CodeTransition's font-family
+		// override.
+		document.body.classList.add('cf-cursor-hidden');
 		cursor.style.left = `${home.x}px`;
 		cursor.style.top = `${home.y}px`;
 		cursor.style.opacity = '1';
@@ -178,7 +185,7 @@
 						const returnTo = getMousePosition();
 						animateCursor(target, returnTo, 450, () => {
 							if (fakeCursorEl) fakeCursorEl.style.opacity = '0';
-							document.body.style.cursor = '';
+							document.body.classList.remove('cf-cursor-hidden');
 						});
 					});
 				}, 90);
@@ -218,7 +225,7 @@
 		// also fires during SSR (where there's no `document`), so this must
 		// stay guarded.
 		if (typeof document !== 'undefined') {
-			document.body.style.cursor = '';
+			document.body.classList.remove('cf-cursor-hidden');
 		}
 	});
 
@@ -458,6 +465,15 @@
 		opacity: 0;
 		pointer-events: none;
 		filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+	}
+
+	/* `!important` + `*` because buttons/links/inputs all set their own
+	   explicit `cursor` (Tailwind's cursor-pointer etc.), which otherwise
+	   overrides a plain inherited `cursor: none` on body — leaving the real
+	   cursor visible next to the fake one whenever it crossed one. */
+	:global(body.cf-cursor-hidden),
+	:global(body.cf-cursor-hidden *) {
+		cursor: none !important;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
