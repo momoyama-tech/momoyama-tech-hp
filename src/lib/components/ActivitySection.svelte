@@ -1,7 +1,6 @@
 <script>
 	import ActivityTile from './ActivityTile.svelte';
-	import { fly } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
+	import { fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { language } from '$lib/stores/language.svelte.js';
 	import { translations } from '$lib/i18n/translations.js';
@@ -118,14 +117,14 @@
 			<div class="mb-16">
 				<h2
 					class="mb-4 text-4xl font-semibold tracking-tight md:text-5xl transition-colors text-[#1D1D1F] dark:text-white dark:text-glow"
-					in:fly={{ y: 30, duration: 600, easing: cubicOut }}
+					in:fade={{ duration: 600 }}
 				>
 					{t.focus.title}
 				</h2>
 				<p
 					class="text-lg transition-colors dark:text-zinc-400"
 					style="color: #6B6B6B;"
-					in:fly={{ y: 30, delay: 100, duration: 600, easing: cubicOut }}
+					in:fade={{ delay: 100, duration: 600 }}
 				>
 					{t.focus.subtitle}
 				</p>
@@ -133,7 +132,7 @@
 
 			<div class="grid gap-8 md:grid-cols-3">
 				{#each displayActivities as activity, i}
-					<div in:fly={{ y: 50, delay: 200 + i * 100, duration: 700, easing: cubicOut }}>
+					<div in:fade={{ delay: 200 + i * 100, duration: 700 }}>
 						<ActivityTile
 							title={activity.title}
 							description={activity.description}
