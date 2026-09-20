@@ -119,9 +119,8 @@
 		gap: 0.4em;
 		padding: 5px 9px;
 		border-radius: 6px;
-		background: rgba(5, 10, 15, 0.55);
+		background: rgba(5, 10, 15, 0.82);
 		border: 1px solid rgba(255, 255, 255, 0.12);
-		backdrop-filter: blur(6px);
 		font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
 		font-size: 11px;
 		letter-spacing: 0.02em;
@@ -129,10 +128,10 @@
 		pointer-events: none;
 	}
 
-	/* One continuous, never-restarted keyframe animation — safe under the
-	   GPU-compositor-corruption constraint documented in
-	   BatteryDegradation.svelte, which only applies to repeatedly
-	   restarted/class-toggled animations. */
+	/* Static on purpose: an infinite keyframe animation inside a fixed
+	   element is the same class of always-repainting compositor work that
+	   caused the black-screen bug, so the dot doesn't pulse and the badge
+	   has no backdrop-filter. */
 	.live-dot {
 		align-self: center;
 		width: 6px;
@@ -140,17 +139,6 @@
 		border-radius: 50%;
 		background: #4ade80;
 		box-shadow: 0 0 4px rgba(74, 222, 128, 0.8);
-		animation: live-pulse 2s ease-in-out infinite;
-	}
-
-	@keyframes live-pulse {
-		0%,
-		100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.35;
-		}
 	}
 
 	.live-digits {

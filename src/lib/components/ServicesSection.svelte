@@ -469,16 +469,12 @@
 	/* Scroll-triggered entrance. The class flip itself is instant (added by
 	   revealOnScroll on intersection, optionally after a JS setTimeout stagger
 	   — never via CSS transition-delay, so it can't leak into this element's
-	   other `transition-all` hover rules); only opacity/transform animate. */
+	   other `transition-all` hover rules); only opacity animates. */
 	.reveal-fade-up {
 		opacity: 0;
-		transform: translateY(28px);
 	}
 	:global(.reveal-fade-up.is-revealed) {
 		opacity: 1;
-		transform: translateY(0);
-		transition:
-			opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-			transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+		transition: opacity 0.7s ease-out;
 	}
 </style>
